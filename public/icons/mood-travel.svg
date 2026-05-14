@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="planeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d0e8ff"/>
+    </linearGradient>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#87ceeb"/>
+      <stop offset="100%" stop-color="#c8e8ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky / clouds background -->
+  <!-- Cloud 1 -->
+  <g opacity="0.85">
+    <circle cx="35" cy="52" r="18" fill="white"/>
+    <circle cx="55" cy="44" r="22" fill="white"/>
+    <circle cx="76" cy="50" r="16" fill="white"/>
+    <rect x="35" y="52" width="57" height="18" fill="white"/>
+  </g>
+  <!-- Cloud 2 (smaller) -->
+  <g opacity="0.7">
+    <circle cx="148" cy="148" r="13" fill="white"/>
+    <circle cx="163" cy="142" r="16" fill="white"/>
+    <circle cx="178" cy="147" r="11" fill="white"/>
+    <rect x="148" y="147" width="41" height="14" fill="white"/>
+  </g>
+
+  <!-- Airplane (flying diagonally upper-right to lower-left tilt) -->
+  <g transform="rotate(-20 100 110)">
+    <!-- Fuselage -->
+    <ellipse cx="100" cy="110" rx="58" ry="18" fill="#1a1a1a"/>
+    <ellipse cx="100" cy="110" rx="55" ry="15" fill="url(#planeGrad)"/>
+
+    <!-- Nose -->
+    <path d="M155 110 Q170 108 175 110 Q170 112 155 110 Z" fill="#1a1a1a"/>
+    <path d="M155 110 Q168 108 173 110 Q168 112 155 110 Z" fill="#e0f0ff"/>
+
+    <!-- Tail -->
+    <path d="M42 105 Q28 88 22 82 Q30 90 42 97 Z" fill="#1a1a1a"/>
+    <path d="M42 106 Q30 90 24 84 Q31 91 42 99 Z" fill="#d0e8ff"/>
+
+    <!-- Tail fin (vertical) -->
+    <path d="M50 97 Q45 75 55 68 Q60 80 58 97 Z" fill="#1a1a1a"/>
+    <path d="M52 97 Q47 78 56 71 Q61 82 59 97 Z" fill="#d0e8ff"/>
+
+    <!-- Main wings -->
+    <path d="M115 107 Q118 80 150 72 Q148 90 130 107 Z" fill="#1a1a1a"/>
+    <path d="M115 108 Q118 83 148 75 Q146 92 130 108 Z" fill="#c8e0ff"/>
+    <path d="M105 113 Q102 140 70 148 Q72 130 90 113 Z" fill="#1a1a1a"/>
+    <path d="M105 113 Q102 138 72 146 Q74 129 90 113 Z" fill="#c8e0ff"/>
+
+    <!-- Windows row -->
+    <g fill="#5599cc" stroke="#1a1a1a" stroke-width="1">
+      <ellipse cx="145" cy="107" rx="5" ry="7"/>
+      <ellipse cx="130" cy="105" rx="5" ry="7"/>
+      <ellipse cx="115" cy="104" rx="5" ry="7"/>
+      <ellipse cx="100" cy="104" rx="5" ry="7"/>
+      <ellipse cx="85" cy="105" rx="5" ry="7"/>
+    </g>
+    <!-- Window shine -->
+    <g fill="rgba(255,255,255,0.5)">
+      <ellipse cx="143" cy="105" rx="2" ry="3"/>
+      <ellipse cx="128" cy="103" rx="2" ry="3"/>
+      <ellipse cx="113" cy="102" rx="2" ry="3"/>
+    </g>
+
+    <!-- Engine under right wing -->
+    <ellipse cx="138" cy="116" rx="14" ry="6" fill="#1a1a1a"/>
+    <ellipse cx="138" cy="116" rx="12" ry="4.5" fill="#888"/>
+    <!-- Engine under left wing -->
+    <ellipse cx="82" cy="120" rx="12" ry="5" fill="#1a1a1a"/>
+    <ellipse cx="82" cy="120" rx="10" ry="3.5" fill="#888"/>
+  </g>
+
+  <!-- Exhaust trail -->
+  <g opacity="0.4">
+    <path d="M32 126 Q18 130 8 128" stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M28 132 Q12 138 4 134" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Stars in sky -->
+  <g fill="#ffd700">
+    <polygon points="168,28 170,34 176,34 171,38 173,44 168,40 163,44 165,38 160,34 166,34" transform="scale(0.6) translate(110,-10)"/>
+  </g>
+  <circle cx="178" cy="30" r="3" fill="#ffd700"/>
+  <circle cx="18" cy="145" r="2.5" fill="#ffd700" opacity="0.6"/>
+</svg>

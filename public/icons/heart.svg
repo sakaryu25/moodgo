@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="heartGrad" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="55%" stop-color="#e8192c"/>
+      <stop offset="100%" stop-color="#b01020"/>
+    </radialGradient>
+    <radialGradient id="heartShine" cx="42%" cy="28%" r="48%">
+      <stop offset="0%" stop-color="rgba(255,200,200,0.7)"/>
+      <stop offset="100%" stop-color="rgba(255,100,100,0)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Heart outline (thick black) -->
+  <path d="M100 170 C60 145 15 115 15 72 C15 45 35 25 60 25 C75 25 88 32 100 45 C112 32 125 25 140 25 C165 25 185 45 185 72 C185 115 140 145 100 170 Z"
+        fill="#111" stroke="#111" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Heart red fill -->
+  <path d="M100 170 C60 145 15 115 15 72 C15 45 35 25 60 25 C75 25 88 32 100 45 C112 32 125 25 140 25 C165 25 185 45 185 72 C185 115 140 145 100 170 Z"
+        fill="url(#heartGrad)"/>
+  <!-- Shine overlay -->
+  <path d="M100 170 C60 145 15 115 15 72 C15 45 35 25 60 25 C75 25 88 32 100 45 C112 32 125 25 140 25 C165 25 185 45 185 72 C185 115 140 145 100 170 Z"
+        fill="url(#heartShine)"/>
+
+  <!-- Glossy highlight blob (upper-left) -->
+  <ellipse cx="68" cy="62" rx="18" ry="11" fill="rgba(255,230,230,0.65)" transform="rotate(-20 68 62)"/>
+  <!-- Smaller secondary highlight -->
+  <ellipse cx="56" cy="75" rx="8" ry="5" fill="rgba(255,240,240,0.45)" transform="rotate(-15 56 75)"/>
+</svg>

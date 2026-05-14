@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="carBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff6666"/>
+      <stop offset="100%" stop-color="#cc1111"/>
+    </linearGradient>
+    <radialGradient id="wheelGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#555"/>
+      <stop offset="100%" stop-color="#111"/>
+    </radialGradient>
+    <radialGradient id="windowGrad" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#aaddff"/>
+      <stop offset="100%" stop-color="#5599cc"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Car shadow -->
+  <ellipse cx="100" cy="178" rx="75" ry="10" fill="rgba(0,0,0,0.2)"/>
+
+  <!-- Car body outline -->
+  <rect x="15" y="110" width="170" height="55" rx="14" fill="#1a1a1a"/>
+  <!-- Car body fill -->
+  <rect x="18" y="113" width="164" height="49" rx="12" fill="url(#carBodyGrad)"/>
+
+  <!-- Cabin (roof) outline -->
+  <path d="M52 112 Q60 68 90 62 L140 62 Q160 68 158 112 Z" fill="#1a1a1a"/>
+  <!-- Cabin fill -->
+  <path d="M55 112 Q62 72 91 65 L139 65 Q157 72 155 112 Z" fill="url(#carBodyGrad)"/>
+
+  <!-- Windows -->
+  <!-- Left window -->
+  <path d="M62 110 Q66 78 88 72 L108 72 L108 110 Z" fill="#1a1a1a"/>
+  <path d="M65 108 Q69 81 89 75 L106 75 L106 108 Z" fill="url(#windowGrad)"/>
+  <!-- Right window -->
+  <path d="M112 110 L112 72 L132 72 Q150 78 148 110 Z" fill="#1a1a1a"/>
+  <path d="M114 108 L114 75 L131 75 Q148 81 145 108 Z" fill="url(#windowGrad)"/>
+  <!-- Window divider -->
+  <line x1="110" y1="72" x2="110" y2="110" stroke="#1a1a1a" stroke-width="4"/>
+
+  <!-- Window shine -->
+  <ellipse cx="82" cy="86" rx="10" ry="5" fill="rgba(255,255,255,0.4)" transform="rotate(-15 82 86)"/>
+  <ellipse cx="130" cy="86" rx="10" ry="5" fill="rgba(255,255,255,0.4)" transform="rotate(-15 130 86)"/>
+
+  <!-- Headlight right -->
+  <ellipse cx="170" cy="130" rx="12" ry="8" fill="#1a1a1a"/>
+  <ellipse cx="170" cy="130" rx="10" ry="6" fill="#fffaaa"/>
+  <ellipse cx="168" cy="128" rx="5" ry="3" fill="rgba(255,255,255,0.7)"/>
+
+  <!-- Tail light left -->
+  <ellipse cx="30" cy="130" rx="12" ry="8" fill="#1a1a1a"/>
+  <ellipse cx="30" cy="130" rx="10" ry="6" fill="#ff3333"/>
+
+  <!-- Wheels -->
+  <!-- Left wheel -->
+  <circle cx="52" cy="162" r="24" fill="#1a1a1a"/>
+  <circle cx="52" cy="162" r="21" fill="url(#wheelGrad)"/>
+  <circle cx="52" cy="162" r="13" fill="#888"/>
+  <circle cx="52" cy="162" r="7" fill="#444"/>
+  <!-- Wheel spokes -->
+  <line x1="52" y1="149" x2="52" y2="175" stroke="#999" stroke-width="2.5"/>
+  <line x1="39" y1="162" x2="65" y2="162" stroke="#999" stroke-width="2.5"/>
+  <line x1="43" y1="153" x2="61" y2="171" stroke="#999" stroke-width="2.5"/>
+  <line x1="61" y1="153" x2="43" y2="171" stroke="#999" stroke-width="2.5"/>
+  <!-- Wheel shine -->
+  <ellipse cx="46" cy="154" rx="5" ry="3" fill="rgba(255,255,255,0.25)" transform="rotate(-30 46 154)"/>
+
+  <!-- Right wheel -->
+  <circle cx="148" cy="162" r="24" fill="#1a1a1a"/>
+  <circle cx="148" cy="162" r="21" fill="url(#wheelGrad)"/>
+  <circle cx="148" cy="162" r="13" fill="#888"/>
+  <circle cx="148" cy="162" r="7" fill="#444"/>
+  <line x1="148" y1="149" x2="148" y2="175" stroke="#999" stroke-width="2.5"/>
+  <line x1="135" y1="162" x2="161" y2="162" stroke="#999" stroke-width="2.5"/>
+  <line x1="139" y1="153" x2="157" y2="171" stroke="#999" stroke-width="2.5"/>
+  <line x1="157" y1="153" x2="139" y2="171" stroke="#999" stroke-width="2.5"/>
+  <ellipse cx="142" cy="154" rx="5" ry="3" fill="rgba(255,255,255,0.25)" transform="rotate(-30 142 154)"/>
+
+  <!-- Body shine stripe -->
+  <path d="M25 118 Q100 114 175 118" stroke="rgba(255,255,255,0.3)" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Speed lines -->
+  <g stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" opacity="0.35">
+    <line x1="5" y1="118" x2="22" y2="118"/>
+    <line x1="5" y1="130" x2="18" y2="130"/>
+    <line x1="5" y1="142" x2="14" y2="142"/>
+  </g>
+</svg>

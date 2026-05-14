@@ -1,0 +1,79 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+/* ── モバイル（480px以下）レスポンシブ調整 ── */
+@media (max-width: 480px) {
+  .page-main {
+    padding: 12px 10px !important;
+    align-items: flex-start !important;
+    min-height: 100dvh !important;
+  }
+
+  .main-card {
+    padding: 20px 14px !important;
+    border-radius: 24px !important;
+    border-width: 2px !important;
+  }
+
+  .main-card h2 {
+    font-size: 26px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .bubble-grid {
+    gap: 10px !important;
+    padding: 10px 0 !important;
+    margin-bottom: 16px !important;
+  }
+
+  .bubble-btn {
+    min-height: 88px !important;
+    font-size: 13px !important;
+    padding: 8px !important;
+  }
+
+  .result-list {
+    gap: 14px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .result-card {
+    border-radius: 22px !important;
+  }
+
+  .result-card-photo {
+    height: 180px !important;
+  }
+
+  .result-card-photo::-webkit-scrollbar {
+    display: none;
+  }
+
+  .result-card-body {
+    padding: 14px 14px 14px !important;
+  }
+
+  .result-title {
+    font-size: 22px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .home-panel {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .home-panel h2 {
+    font-size: 20px !important;
+  }
+
+  .step-heading {
+    font-size: 26px !important;
+  }
+}

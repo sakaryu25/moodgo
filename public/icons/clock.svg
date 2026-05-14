@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Outer ring / border -->
+  <circle cx="100" cy="100" r="97" fill="#1a4a8a" stroke="#0d2f5c" stroke-width="2"/>
+  <!-- Blue frame gradient -->
+  <circle cx="100" cy="100" r="97" fill="url(#outerRing)"/>
+  <!-- Rim highlight -->
+  <circle cx="100" cy="100" r="80" fill="white" stroke="#1a4a8a" stroke-width="3"/>
+  <!-- Clock face -->
+  <circle cx="100" cy="100" r="78" fill="#f5f0e0"/>
+  <!-- Subtle inner shadow -->
+  <circle cx="100" cy="100" r="78" fill="none" stroke="#d0c8b0" stroke-width="1.5"/>
+
+  <defs>
+    <radialGradient id="outerRing" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#4a80d0"/>
+      <stop offset="50%" stop-color="#2060b8"/>
+      <stop offset="100%" stop-color="#1a4a8a"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Hour markers -->
+  <g fill="#222" stroke="#222" stroke-width="1">
+    <!-- 12 -->
+    <rect x="97" y="24" width="6" height="14" rx="3"/>
+    <!-- 3 -->
+    <rect x="162" y="97" width="14" height="6" rx="3"/>
+    <!-- 6 -->
+    <rect x="97" y="162" width="6" height="14" rx="3"/>
+    <!-- 9 -->
+    <rect x="24" y="97" width="14" height="6" rx="3"/>
+  </g>
+
+  <!-- Minute markers (small dots) -->
+  <g fill="#555">
+    <!-- 1 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(30 100 100)"/>
+    <!-- 2 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(60 100 100)"/>
+    <!-- 4 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(120 100 100)"/>
+    <!-- 5 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(150 100 100)"/>
+    <!-- 7 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(210 100 100)"/>
+    <!-- 8 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(240 100 100)"/>
+    <!-- 10 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(300 100 100)"/>
+    <!-- 11 o'clock -->
+    <rect x="128" y="30" width="4" height="9" rx="2" transform="rotate(330 100 100)"/>
+  </g>
+
+  <!-- Numbers -->
+  <g font-family="Arial Black, sans-serif" font-weight="900" font-size="16" fill="#1a1a1a" text-anchor="middle" dominant-baseline="central">
+    <text x="100" y="42">12</text>
+    <text x="158" y="100">3</text>
+    <text x="100" y="158">6</text>
+    <text x="42" y="100">9</text>
+    <text x="142" y="58">1</text>
+    <text x="158" y="142">4</text><!-- actually 5 -->
+  </g>
+  <!-- Additional numbers -->
+  <g font-family="Arial Black, sans-serif" font-weight="900" font-size="15" fill="#1a1a1a" text-anchor="middle" dominant-baseline="central">
+    <text x="142" y="58">1</text>
+    <text x="158" y="58">2</text>
+    <text x="57" y="58">11</text>
+    <text x="42" y="58">10</text>
+    <text x="158" y="142">5</text>
+    <text x="142" y="158">4</text><!-- override -->
+    <text x="58" y="142">7</text>
+    <text x="42" y="142">8</text><!-- override -->
+  </g>
+
+  <!-- Hour hand (pointing to 12) -->
+  <line x1="100" y1="100" x2="100" y2="45" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+  <!-- Minute hand (pointing to 3, i.e. →) -->
+  <line x1="100" y1="100" x2="152" y2="100" stroke="#2060b8" stroke-width="5" stroke-linecap="round"/>
+  <!-- Arrow head on minute hand -->
+  <polygon points="152,100 142,94 142,106" fill="#2060b8"/>
+  <!-- Arrow head on hour hand -->
+  <polygon points="100,45 94,58 106,58" fill="#1a1a1a"/>
+
+  <!-- Center dot -->
+  <circle cx="100" cy="100" r="6" fill="#333" stroke="#111" stroke-width="1.5"/>
+</svg>
