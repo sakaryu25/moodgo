@@ -3425,6 +3425,87 @@ function chooseFinalResults(items: ScoredItem[], mood?: string) {
   return final;
 }
 
+// ─── Supabase-first ヘルパー関数 ──────────────────────────────────────────────
+
+function getRadiusKmFromTransport(transport?: string | string[]): number {
+  const ts = Array.isArray(transport) ? transport : [transport ?? ""];
+  if (ts.some(t => t?.includes("徒歩") || t?.includes("歩き"))) return 3;
+  if (ts.some(t => t?.includes("自転車"))) return 10;
+  if (ts.some(t => t?.includes("車") || t?.includes("バイク"))) return 80;
+  return 40;
+}
+
+// 交通手段＋所要時間から検索半径を決定
+function getRadiusKmFromTransportAndTime(transport?: string | string[], time?: string): number {
+  const ts = Array.isArray(transport) ? transport : [transport ?? ""];
+  const hasCar   = ts.some(t => t?.includes("車") || t?.includes("バイク") || t?.includes("ドライブ"));
+  const hasTrain = ts.some(t => t?.includes("電車") || t?.includes("バス"));
+  const hasBike  = ts.some(t => t?.includes("自転車"));
+  const hasWalk  = ts.some(t => t?.includes("徒歩") || t?.includes("歩き"));
+
+  // 交通手段ごとの基本半径(km)
+  const base = hasCar ? 80 : hasTrain ? 40 : hasBike ? 10 : hasWalk ? 3 : 40;
+
+  // 時間による倍率
+  const mult = !time                   ? 0.7
+    : time.includes("30分")            ? 0.3
+    : time.includes("1〜2")            ? 0.6
+    : time.includes("2〜4")            ? 0.85
+    : time.includes("4〜6")            ? 1.0
+    : time.includes("6時間以上")       ? 1.3
+    : 0.7;
+
+  return Math.max(2, Math.round(base * mult));
+}
+
+async function generateSupabaseReasons(
+  spots: import("@/types/onsen").PlaceResponse[],
+  answers: { mood?: string; companion?: string; transport?: string | string[]; time?: string; budget?: number; freeWord?: string; dynamicQs?: { question: string; answer: string }[] },
+  mustTags: string[],
+  niceTags: string[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (!process.env.OPENAI_API_KEY || spots.length === 0) return result;
+  try {
+    const moodDesc      = answers.mood ?? "";
+    const companionDesc = answers.companion ?? "";
+    const transportDesc = Array.isArray(answers.transport) ? answers.transport.join("・") : (answers.transport ?? "");
+    const timeDesc      = answers.time ? `滞在時間「${answers.time}」` : "";
+    const budgetDesc    = answers.budget !== undefined ? `予算「〜¥${answers.budget.toLocaleString()}」` : "";
+    const freeWordDesc  = answers.freeWord ? `希望「${answers.freeWord}」` : "";
+    const extraContext  = (answers.dynamicQs ?? []).map((q: { question: string; answer: string }) => `${q.question}→${q.answer}`).join("、");
+    const contextParts  = [timeDesc, budgetDesc, freeWordDesc, extraContext].filter(Boolean).join("、");
+    const spotList = spots.map((s, i) =>
+      `${i + 1}. ${s.name}（タグ: ${(s.tags ?? []).filter(t => [...mustTags, ...niceTags].includes(t)).join(" ")}）`
+    ).join("\n");
+
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `あなたは旅行プランナーです。ユーザーの気分・状況に合わせて各スポットの推薦理由を1文（30〜50字）で書いてください。
+ユーザー: 気分「${moodDesc}」、同伴「${companionDesc}」、交通「${transportDesc}」${contextParts ? "、" + contextParts : ""}
+※同伴者が恋人ならロマンチックな観点、友達ならワイワイできる観点、一人なら集中・リフレッシュ観点で書くこと。
+JSON: {"reasons": {"スポット名": "推薦理由文", ...}}`,
+        },
+        { role: "user", content: spotList },
+      ],
+      max_tokens: 800,
+    });
+    const text = res.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(text);
+    for (const [name, reason] of Object.entries(parsed.reasons ?? {})) {
+      result.set(name, String(reason));
+    }
+  } catch (e) {
+    console.error("[recommend] reason generation failed:", e);
+  }
+  return result;
+}
+
 export async function POST(request: Request) {
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -3468,6 +3549,102 @@ export async function POST(request: Request) {
     const { extractUserTagsFromAnswers } = await import("@/lib/predefined-tags");
     const userTags = extractUserTagsFromAnswers(answers);
     const allUserTags = new Set([...userTags.mustTags, ...userTags.niceToHaveTags]);
+
+    // ─── Supabase-first メインフロー ───────────────────────────────────────────
+    // placesテーブルを主軸に検索し、Google Placesで写真・営業時間・開店状況を補強
+    // ※「お腹すいた」「カフェ系」はHotPepper/既存フローを使うためスキップ
+    const isSkipSupabaseMood = answers.mood === "お腹すいた" ||
+      getDynamicQs(answers).some(q => q.answer.includes("カフェ") || q.answer.includes("スイーツ") || q.answer.includes("グルメ"));
+    try {
+      if (isSkipSupabaseMood) throw new Error("food mood — skip supabase flow");
+      const { searchPlacesByTags } = await import("@/lib/supabase-places");
+      const sbMustTags = [...userTags.mustTags];
+      const sbNiceTags = [...userTags.niceToHaveTags];
+      const radiusKm = getRadiusKmFromTransportAndTime(answers.transport, answers.time);
+
+      const sbResults = await searchPlacesByTags({
+        mustTags: sbMustTags,
+        fallbackTags: sbMustTags.slice(0, 1),
+        lat: answers.originLat ?? 0,
+        lng: answers.originLng ?? 0,
+        radiusKm,
+        transport: answers.transport,
+        limit: 15,
+        googleApiKey: apiKey,
+      });
+
+      if (sbResults.length >= 3) {
+        // 予算による価格フィルター（priceLevel が取得できている場合）
+        const priceLevelCost: Record<string, number> = {
+          "無料": 0, "￥": 1000, "￥￥": 3500, "￥￥￥": 8000, "￥￥￥￥": 15000,
+        };
+        const budgetMax = answers.budget ?? Infinity;
+        const budgetFiltered = sbResults.filter(r => {
+          if (budgetMax >= 10000) return true;       // 予算十分なら全件OK
+          if (!r.priceLevel) return true;            // 価格情報なしはスルー
+          return (priceLevelCost[r.priceLevel] ?? 0) <= budgetMax;
+        });
+        const poolForScore = (budgetFiltered.length >= 3 ? budgetFiltered : sbResults)
+          .filter(r => !seenPlaces.includes(r.name) || !showUnseenOnly);
+
+        // 追加タグ一致スコアでソート（より気分に合ったスポットを上位に）
+        const scored = poolForScore
+          .map(r => ({
+            ...r,
+            _niceScore: (r.tags ?? []).filter(t => sbNiceTags.includes(t)).length,
+          }))
+          .sort((a, b) => b._niceScore - a._niceScore);
+
+        // OpenAIで推薦理由を生成（ユーザーの気分に合った一言コメント）
+        const reasons = await generateSupabaseReasons(scored, answers, sbMustTags, sbNiceTags);
+
+        const today = new Date().getDay(); // 0=日...6=土
+        const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+
+        const recommendations = scored.map(r => {
+          const matchedTags = (r.tags ?? []).filter(t => [...sbMustTags, ...sbNiceTags].includes(t));
+          // 今日の営業時間テキストを抽出
+          const todayHours = r.openingHours
+            ? r.openingHours.split("\n").find(l => l.startsWith(dayNames[today])) ?? r.openingHours.split("\n")[0] ?? ""
+            : "";
+          const openingHoursText = todayHours.replace(/^[^:：]+[:：]\s*/, "");
+          return {
+            title: r.name,
+            address: r.address,
+            photoUrl: r.imageUrl,
+            photoUrls: r.photoUrls,
+            rating: r.rating,
+            userRatingCount: r.reviewCount,
+            openNow: r.openNow ?? undefined,
+            openingHoursText,
+            mapUrl: r.googleMapsUrl,
+            googleMapsUrl: r.googleMapsUrl,
+            reason: reasons.get(r.name) ?? r.description ?? "",
+            features: matchedTags.slice(0, 5),
+            distanceText: r.distanceInfo,
+            durationText: "",
+            stationText: r.stationInfo ?? "",
+            vibe: "",
+            budget: "",
+            time: "",
+            priceLevel: r.priceLevel ?? undefined,
+            isUserSpot: false,
+            hasUserPhotos: false,
+            userPhotoCount: 0,
+            routesByMode: undefined,
+          };
+        });
+
+        return json({
+          recommendations,
+          usedAI: !!process.env.OPENAI_API_KEY,
+          warning: answers.originLat ? "" : "現在地未使用のため、距離順ではない場合があります。",
+        });
+      }
+    } catch (err) {
+      console.error("[recommend] Supabase-first flow error, falling back:", err);
+    }
+    // ─── Supabaseで結果不足の場合は既存 Google Places フローへ ────────────────
 
     /**
      * スポットの auto_tags とユーザータグの一致スコアを計算
@@ -3678,26 +3855,26 @@ export async function POST(request: Request) {
 
         // dedup & フィルタ & build hotpepperShops format
         const seen = new Set<string>();
-        const hiShops = hiResults
+        const hiShops = await Promise.all(
+          hiResults
           .filter(p => {
             const id = String(p.id ?? "");
             if (!id || seen.has(id)) return false;
             seen.add(id);
             const name    = ((p.displayName as Record<string, unknown>)?.text as string) ?? "";
             const address = String(p.formattedAddress ?? "");
-            // ネガティブフィルタ: 公園・非飲食施設は除外
             if (HIGHRISE_NG.some(ng => name.includes(ng))) return false;
-            // ポジティブフィルタ: 高層ビル関連キーワードが名前または住所に含まれること
             const nameOk = HIGHRISE_POSITIVE_NAME.some(kw => name.includes(kw));
             const addrOk = HIGHRISE_POSITIVE_ADDR.some(kw => address.includes(kw));
             return nameOk || addrOk;
           })
-          .map(p => {
+          .map(async p => {
             const name = ((p.displayName as Record<string, unknown>)?.text as string) ?? "";
             const photos = (p.photos as Array<Record<string, unknown>>) ?? [];
-            const photoUrls = photos
-              .filter(ph => ph?.name)
-              .map(ph => `https://places.googleapis.com/v1/${ph.name}/media?maxWidthPx=800&key=${apiKey}`);
+            const resolvedUrls = await Promise.all(
+              photos.slice(0, 5).filter(ph => ph?.name).map(ph => getPhotoUrl(String(ph.name), apiKey))
+            );
+            const photoUrls = resolvedUrls.filter(u => u.startsWith("https://lh3.googleusercontent.com"));
             const hours = p.currentOpeningHours as Record<string, unknown> | undefined;
             const loc = p.location as Record<string, unknown> | undefined;
             return {
@@ -3725,7 +3902,8 @@ export async function POST(request: Request) {
               reviewCount: typeof p.userRatingCount === "number" ? p.userRatingCount : null,
               openNow: typeof hours?.openNow === "boolean" ? hours.openNow : null,
             };
-          });
+          })
+        );
         if (hiShops.length > 0) {
           console.log(`[recommend] 高層ビル料理: Google Places ${hiShops.length}件`);
           return json({ recommendations: [], hotpepperShops: hiShops, usedAI: true, warning: "" });
@@ -4789,10 +4967,11 @@ export async function POST(request: Request) {
           });
           if (placeRes.ok) {
             const placeData = await placeRes.json();
-            const photos = placeData.places?.[0]?.photos ?? [];
-            imgs = photos.map((p: { name: string }) =>
-              `https://places.googleapis.com/v1/${p.name}/media?maxHeightPx=800&maxWidthPx=800&key=${apiKey}`
+            const photos: Array<{ name: string }> = placeData.places?.[0]?.photos ?? [];
+            const resolved = await Promise.all(
+              photos.slice(0, 5).map(p => getPhotoUrl(p.name, apiKey))
             );
+            imgs = resolved.filter(u => u.startsWith("https://lh3.googleusercontent.com"));
           }
         } catch { /* 補完失敗は無視 */ }
       }

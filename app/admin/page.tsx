@@ -154,7 +154,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
-  const [tab, setTab] = useState<"stats" | "suggestions" | "add-spot" | "import" | "visited" | "reports" | "devlog" | "featured">("stats");
+  const [tab, setTab] = useState<"stats" | "suggestions" | "add-spot" | "import" | "visited" | "reports" | "devlog" | "featured" | "geocode" | "merge" | "retag">("stats");
 
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -216,6 +216,30 @@ export default function AdminPage() {
   const [visitedLoading, setVisitedLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [visitedFilter, setVisitedFilter] = useState<"all" | "visited">("visited");
+
+  // 重複統合タブ
+  type DupPlace = { id: string; name: string; address: string; tags: string[]; lat: number | null; lng: number | null; google_place_id: string | null; is_active: boolean };
+  const [mergeGroups, setMergeGroups] = useState<DupPlace[][]>([]);
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeProcessing, setMergeProcessing] = useState<number | null>(null);
+  const [mergeKeep, setMergeKeep] = useState<Record<number, string>>({});
+  const [mergeResult, setMergeResult] = useState("");
+
+  // 座標登録タブ
+  const [geoPlaces, setGeoPlaces] = useState<{ id: string; name: string; address: string; lat: number | null; lng: number | null }[]>([]);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoUpdating, setGeoUpdating] = useState<string | null>(null);
+  const [geoBulkRunning, setGeoBulkRunning] = useState(false);
+  const [geoBulkResult, setGeoBulkResult] = useState<string>("");
+  const [geoManual, setGeoManual] = useState<Record<string, { lat: string; lng: string }>>({});
+
+  // 一括タグ修正タブ（placesテーブル）
+  const [retagAllInfo, setRetagAllInfo] = useState<{ total: number; needsRetag: number } | null>(null);
+  const [retagAllLoading, setRetagAllLoading] = useState(false);
+  const [retagAllRunning, setRetagAllRunning] = useState(false);
+  const [retagAllResult, setRetagAllResult] = useState<{ updated: number; skipped: number; failed: number; results: { name: string; tags: string[]; action: string }[] } | null>(null);
+  const [retagAllOverwrite, setRetagAllOverwrite] = useState(false);
+
   const [newFeedback, setNewFeedback] = useState({
     mood: "", area: "", age: "", gender: "", companion: "",
     atmosphere: "", priority: "", visitedPlace: "", rating: "4",
@@ -1671,6 +1695,42 @@ export default function AdminPage() {
       .finally(() => setReportsLoading(false));
   }, [authed, tab]);
 
+  // 重複スポット読み込み（mergeタブ）
+  useEffect(() => {
+    if (!authed || tab !== "merge") return;
+    setMergeLoading(true);
+    setMergeResult("");
+    fetch("/api/admin/merge-duplicates")
+      .then(r => r.json())
+      .then(d => { if (d.ok) setMergeGroups(d.groups ?? []); })
+      .catch(() => {})
+      .finally(() => setMergeLoading(false));
+  }, [authed, tab]);
+
+  // 座標未登録スポット読み込み（geocodeタブ）
+  useEffect(() => {
+    if (!authed || tab !== "geocode") return;
+    setGeoLoading(true);
+    setGeoBulkResult("");
+    fetch("/api/admin/geocode-missing")
+      .then(r => r.json())
+      .then(d => { if (d.ok) setGeoPlaces(d.data ?? []); })
+      .catch(() => {})
+      .finally(() => setGeoLoading(false));
+  }, [authed, tab]);
+
+  // 一括タグ修正タブ: 件数確認
+  useEffect(() => {
+    if (!authed || tab !== "retag") return;
+    setRetagAllLoading(true);
+    setRetagAllResult(null);
+    fetch("/api/admin/retag-all?secret=moodgoadmin123")
+      .then(r => r.json())
+      .then(d => { if (d.ok) setRetagAllInfo({ total: d.total, needsRetag: d.needsRetag }); })
+      .catch(() => {})
+      .finally(() => setRetagAllLoading(false));
+  }, [authed, tab]);
+
   const handleAddFeedback = async () => {
     if (!newFeedback.visitedPlace.trim() && !newFeedback.topRecommendations.trim()) {
       setFeedbackError("訪問場所またはおすすめスポット名は必須です");
@@ -2069,6 +2129,9 @@ export default function AdminPage() {
             { key: "reports", label: "⚠ 不適切報告" },
             { key: "featured", label: "⭐ 特集ページ" },
             { key: "devlog", label: "📋 開発ログ" },
+            { key: "geocode", label: "📍 座標登録" },
+            { key: "merge",   label: "🔀 重複統合" },
+            { key: "retag",   label: "🏷 一括タグ修正" },
           ] as const).map((t) => (
             <button
               key={t.key}
@@ -5777,6 +5840,435 @@ export default function AdminPage() {
           );
         })()}
 
+        {/* ── 重複統合タブ ───────────────────────────────────────── */}
+        {tab === "merge" && (
+          <div style={{ padding: "24px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 900 }}>🔀 同名スポット重複統合</h2>
+                <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#888" }}>
+                  {mergeLoading ? "読み込み中..." : `${mergeGroups.length} グループの重複を検出`}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setMergeLoading(true);
+                  setMergeResult("");
+                  fetch("/api/admin/merge-duplicates")
+                    .then(r => r.json())
+                    .then(d => { if (d.ok) setMergeGroups(d.groups ?? []); })
+                    .finally(() => setMergeLoading(false));
+                }}
+                style={{ padding: "8px 16px", borderRadius: "10px", border: "1.5px solid #ddd", background: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+              >
+                🔄 再読み込み
+              </button>
+            </div>
+
+            {mergeResult && (
+              <div style={{ marginBottom: "16px", padding: "12px 16px", background: "#f0fff4", border: "1px solid #68d391", borderRadius: "12px", fontWeight: 700, color: "#276749" }}>
+                ✅ {mergeResult}
+              </div>
+            )}
+
+            {mergeLoading ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>読み込み中...</div>
+            ) : mergeGroups.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#68d391", fontWeight: 700, fontSize: "16px" }}>
+                ✅ 重複スポットはありません！
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {mergeGroups.map((group, gi) => {
+                  const keepId = mergeKeep[gi] ?? group[0].id;
+                  const keeper = group.find(p => p.id === keepId) ?? group[0];
+                  const others = group.filter(p => p.id !== keepId);
+                  // マージ後のタグ（全レコードのタグを重複排除して結合）
+                  const mergedTags = [...new Set(group.flatMap(p => p.tags ?? []))];
+                  const isProcessing = mergeProcessing === gi;
+
+                  return (
+                    <div key={gi} style={{ background: "#fff", border: "1.5px solid #f0dfe3", borderRadius: "18px", padding: "20px", boxShadow: "0 2px 8px rgba(74,48,52,0.06)" }}>
+                      {/* ヘッダー */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ fontSize: "16px", fontWeight: 900, color: "#4a3034" }}>
+                          「{group[0].name}」— {group.length} 件の重複
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const deleteIds = others.map(p => p.id);
+                            if (!confirm(`「${keeper.name}」を残し、他 ${deleteIds.length} 件を統合・削除します。よろしいですか？`)) return;
+                            setMergeProcessing(gi);
+                            const res = await fetch("/api/admin/merge-duplicates", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ keepId, deleteIds, mergedTags }),
+                            });
+                            const d = await res.json();
+                            if (d.ok) {
+                              setMergeGroups(prev => prev.filter((_, i) => i !== gi));
+                              setMergeResult(`「${keeper.name}」を統合しました（${d.deleted} 件削除）`);
+                            } else {
+                              alert("統合失敗: " + (d.error ?? "不明"));
+                            }
+                            setMergeProcessing(null);
+                          }}
+                          disabled={isProcessing}
+                          style={{
+                            padding: "8px 18px", borderRadius: "12px", border: "none",
+                            background: isProcessing ? "#ccc" : "linear-gradient(135deg, #ffbf67, #ff8f7f)",
+                            color: "#fff", fontWeight: 900, fontSize: "13px",
+                            cursor: isProcessing ? "default" : "pointer",
+                          }}
+                        >
+                          {isProcessing ? "統合中..." : "🔀 統合する"}
+                        </button>
+                      </div>
+
+                      {/* マージ後タグプレビュー */}
+                      <div style={{ marginBottom: "14px", padding: "10px 14px", background: "#fffaf8", borderRadius: "10px", border: "1px solid #f0dfe3" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 800, color: "#b07080", marginBottom: "6px" }}>統合後のタグ（全件から重複排除）</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                          {mergedTags.map(tag => (
+                            <span key={tag} style={{ padding: "3px 10px", borderRadius: "999px", background: "linear-gradient(135deg, #ffe0e8, #ffd0c8)", fontSize: "11px", fontWeight: 800, color: "#7a3040" }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 各レコード */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {group.map(place => {
+                          const isKeeper = place.id === keepId;
+                          return (
+                            <div
+                              key={place.id}
+                              onClick={() => setMergeKeep(prev => ({ ...prev, [gi]: place.id }))}
+                              style={{
+                                padding: "12px 14px", borderRadius: "12px", cursor: "pointer",
+                                border: isKeeper ? "2px solid #ff8fa5" : "1.5px solid #ead7db",
+                                background: isKeeper ? "linear-gradient(135deg, #fff0f3, #ffe8ec)" : "#fafafa",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{ fontSize: "12px", fontWeight: 900, padding: "2px 8px", borderRadius: "6px", background: isKeeper ? "#ff8fa5" : "#ddd", color: isKeeper ? "#fff" : "#888" }}>
+                                    {isKeeper ? "✓ 残す" : "削除"}
+                                  </span>
+                                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#4a3034" }}>{place.address}</span>
+                                </div>
+                                <span style={{ fontSize: "11px", color: place.lat ? "#68d391" : "#fc8181", fontWeight: 700 }}>
+                                  {place.lat ? `📍 ${place.lat.toFixed(4)}, ${place.lng?.toFixed(4)}` : "📍 座標なし"}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                {(place.tags ?? []).map(tag => (
+                                  <span key={tag} style={{ padding: "2px 8px", borderRadius: "999px", background: "#f0e8ec", fontSize: "11px", color: "#7a3040", fontWeight: 700 }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 座標登録タブ ───────────────────────────────────────── */}
+        {tab === "geocode" && (
+          <div style={{ padding: "24px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 900 }}>📍 座標未登録スポット</h2>
+                <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#888" }}>
+                  {geoLoading ? "読み込み中..." : `${geoPlaces.length} 件の座標未登録スポット`}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  onClick={() => {
+                    setGeoLoading(true);
+                    fetch("/api/admin/geocode-missing")
+                      .then(r => r.json())
+                      .then(d => { if (d.ok) setGeoPlaces(d.data ?? []); })
+                      .finally(() => setGeoLoading(false));
+                  }}
+                  style={{ padding: "8px 16px", borderRadius: "10px", border: "1.5px solid #ddd", background: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+                >
+                  🔄 再読み込み
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`${geoPlaces.length} 件すべてをGoogleジオコードで一括登録しますか？`)) return;
+                    setGeoBulkRunning(true);
+                    setGeoBulkResult("");
+                    const res = await fetch("/api/admin/geocode-missing", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ bulkAll: true }),
+                    });
+                    const d = await res.json();
+                    setGeoBulkResult(`完了: ${d.succeeded ?? 0} / ${d.total ?? 0} 件成功`);
+                    // リスト再取得
+                    fetch("/api/admin/geocode-missing")
+                      .then(r => r.json())
+                      .then(d2 => { if (d2.ok) setGeoPlaces(d2.data ?? []); });
+                    setGeoBulkRunning(false);
+                  }}
+                  disabled={geoBulkRunning || geoPlaces.length === 0}
+                  style={{
+                    padding: "8px 16px", borderRadius: "10px", border: "none",
+                    background: geoBulkRunning || geoPlaces.length === 0 ? "#ccc" : "linear-gradient(135deg, #ffbf67, #ff8f7f)",
+                    color: "#fff", fontWeight: 900, cursor: geoBulkRunning || geoPlaces.length === 0 ? "default" : "pointer", fontSize: "13px",
+                  }}
+                >
+                  {geoBulkRunning ? "処理中..." : "⚡ 一括自動ジオコード"}
+                </button>
+              </div>
+            </div>
+
+            {geoBulkResult && (
+              <div style={{ marginBottom: "16px", padding: "12px 16px", background: "#f0fff4", border: "1px solid #68d391", borderRadius: "12px", fontWeight: 700, color: "#276749" }}>
+                ✅ {geoBulkResult}
+              </div>
+            )}
+
+            {geoLoading ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>読み込み中...</div>
+            ) : geoPlaces.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#68d391", fontWeight: 700, fontSize: "16px" }}>
+                ✅ 座標未登録のスポットはありません！
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {geoPlaces.map(place => {
+                  const manual = geoManual[place.id] ?? { lat: "", lng: "" };
+                  const isUpdating = geoUpdating === place.id;
+                  return (
+                    <div key={place.id} style={{ background: "#fff", border: "1.5px solid #f0dfe3", borderRadius: "16px", padding: "16px 20px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                        <div>
+                          <div style={{ fontSize: "15px", fontWeight: 900, color: "#4a3034" }}>{place.name}</div>
+                          <div style={{ fontSize: "12px", color: "#888", marginTop: "2px" }}>{place.address}</div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            setGeoUpdating(place.id);
+                            const res = await fetch("/api/admin/geocode-missing", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ placeId: place.id, address: place.address }),
+                            });
+                            const d = await res.json();
+                            if (d.ok) {
+                              setGeoPlaces(prev => prev.map(p =>
+                                p.id === place.id ? { ...p, lat: d.lat, lng: d.lng } : p
+                              ));
+                            } else {
+                              alert("ジオコード失敗: " + (d.error ?? "不明"));
+                            }
+                            setGeoUpdating(null);
+                          }}
+                          disabled={isUpdating}
+                          style={{
+                            padding: "7px 14px", borderRadius: "10px", border: "none",
+                            background: isUpdating ? "#ccc" : "linear-gradient(135deg, #63b3ed, #4299e1)",
+                            color: "#fff", fontWeight: 800, fontSize: "12px",
+                            cursor: isUpdating ? "default" : "pointer", whiteSpace: "nowrap",
+                          }}
+                        >
+                          {isUpdating ? "取得中..." : "🌐 自動取得"}
+                        </button>
+                      </div>
+
+                      {/* 取得済みの場合は緑表示 */}
+                      {place.lat != null && place.lng != null ? (
+                        <div style={{ fontSize: "12px", color: "#276749", background: "#f0fff4", borderRadius: "8px", padding: "6px 10px", fontWeight: 700 }}>
+                          ✅ lat: {place.lat.toFixed(6)}, lng: {place.lng.toFixed(6)}
+                        </div>
+                      ) : (
+                        /* 手動入力フォーム */
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                          <input
+                            type="number"
+                            step="any"
+                            placeholder="緯度 (lat) 例: 35.4437"
+                            value={manual.lat}
+                            onChange={e => setGeoManual(prev => ({ ...prev, [place.id]: { ...prev[place.id] ?? { lat: "", lng: "" }, lat: e.target.value } }))}
+                            style={{ flex: 1, minWidth: "140px", padding: "7px 10px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "13px" }}
+                          />
+                          <input
+                            type="number"
+                            step="any"
+                            placeholder="経度 (lng) 例: 139.6380"
+                            value={manual.lng}
+                            onChange={e => setGeoManual(prev => ({ ...prev, [place.id]: { ...prev[place.id] ?? { lat: "", lng: "" }, lng: e.target.value } }))}
+                            style={{ flex: 1, minWidth: "140px", padding: "7px 10px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "13px" }}
+                          />
+                          <button
+                            onClick={async () => {
+                              const lat = parseFloat(manual.lat);
+                              const lng = parseFloat(manual.lng);
+                              if (isNaN(lat) || isNaN(lng)) { alert("緯度・経度を正しく入力してください"); return; }
+                              setGeoUpdating(place.id);
+                              const res = await fetch("/api/admin/geocode-missing", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ placeId: place.id, lat, lng }),
+                              });
+                              const d = await res.json();
+                              if (d.ok) {
+                                setGeoPlaces(prev => prev.map(p =>
+                                  p.id === place.id ? { ...p, lat, lng } : p
+                                ));
+                                setGeoManual(prev => { const n = { ...prev }; delete n[place.id]; return n; });
+                              } else {
+                                alert("保存失敗: " + (d.error ?? "不明"));
+                              }
+                              setGeoUpdating(null);
+                            }}
+                            disabled={isUpdating || !manual.lat || !manual.lng}
+                            style={{
+                              padding: "7px 14px", borderRadius: "10px", border: "none",
+                              background: !manual.lat || !manual.lng ? "#ccc" : "linear-gradient(135deg, #68d391, #38a169)",
+                              color: "#fff", fontWeight: 800, fontSize: "12px",
+                              cursor: !manual.lat || !manual.lng ? "default" : "pointer", whiteSpace: "nowrap",
+                            }}
+                          >
+                            💾 手動保存
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 一括タグ修正タブ ──────────────────────────────────────────────── */}
+        {tab === "retag" && (
+          <div style={{ padding: "24px 0" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>🏷 一括タグ修正</h2>
+            <p style={{ fontSize: "13px", opacity: 0.65, marginBottom: "20px" }}>
+              placesテーブルの全スポットを定義済みタグで一括再タグ付けします。<br />
+              気分タグ・深掘りタグを最低1つずつ必ず付け、定義外のタグを除去します。
+            </p>
+
+            {retagAllLoading && <p style={{ color: "#999", fontSize: "14px" }}>件数を確認中...</p>}
+
+            {retagAllInfo && !retagAllLoading && (
+              <div style={{ background: "#fff8f0", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", border: "1px solid #ffd8b0" }}>
+                <p style={{ fontSize: "15px", fontWeight: 700, marginBottom: "6px" }}>
+                  対象スポット数: <span style={{ color: "#e87040" }}>{retagAllInfo.total}</span> 件
+                </p>
+                <p style={{ fontSize: "13px", color: "#666" }}>
+                  タグ修正が必要: <span style={{ color: "#e87040", fontWeight: 700 }}>{retagAllInfo.needsRetag}</span> 件
+                  （気分タグ未付与 / 深掘りタグ未付与 / 定義外タグあり）
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={retagAllOverwrite}
+                  onChange={e => setRetagAllOverwrite(e.target.checked)}
+                />
+                既にタグが正しいスポットも上書きする
+              </label>
+
+              <button
+                onClick={async () => {
+                  if (!confirm(`${retagAllOverwrite ? "全スポット" : "タグ修正が必要なスポット"}を一括再タグ付けします。時間がかかる場合があります。実行しますか？`)) return;
+                  setRetagAllRunning(true);
+                  setRetagAllResult(null);
+                  try {
+                    const res = await fetch("/api/admin/retag-all", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ secret: "moodgoadmin123", overwrite: retagAllOverwrite }),
+                    });
+                    const d = await res.json();
+                    if (d.ok) {
+                      setRetagAllResult({ updated: d.updated, skipped: d.skipped, failed: d.failed, results: d.results ?? [] });
+                    } else {
+                      alert("エラー: " + (d.error ?? "不明"));
+                    }
+                  } catch (e) {
+                    alert("通信エラー: " + String(e));
+                  } finally {
+                    setRetagAllRunning(false);
+                  }
+                }}
+                disabled={retagAllRunning}
+                style={{
+                  padding: "10px 24px", borderRadius: "12px", border: "none",
+                  background: retagAllRunning ? "#ccc" : "linear-gradient(135deg, #a78bfa, #7c3aed)",
+                  color: "#fff", fontWeight: 800, fontSize: "14px",
+                  cursor: retagAllRunning ? "default" : "pointer",
+                }}
+              >
+                {retagAllRunning ? "処理中... (しばらくお待ちください)" : "🏷 一括タグ修正を実行"}
+              </button>
+            </div>
+
+            {retagAllResult && (
+              <div>
+                <div style={{
+                  background: "#f0fff4", borderRadius: "12px", padding: "16px 20px",
+                  marginBottom: "16px", border: "1px solid #9ae6b4",
+                }}>
+                  <p style={{ fontWeight: 800, fontSize: "15px", marginBottom: "6px" }}>完了</p>
+                  <p style={{ fontSize: "13px" }}>
+                    更新: <strong style={{ color: "#2f855a" }}>{retagAllResult.updated}</strong> 件 /
+                    スキップ: <strong>{retagAllResult.skipped}</strong> 件 /
+                    失敗: <strong style={{ color: "#e53e3e" }}>{retagAllResult.failed}</strong> 件
+                  </p>
+                </div>
+
+                <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid #eee", borderRadius: "12px" }}>
+                  {retagAllResult.results.map((r, i) => (
+                    <div key={i} style={{
+                      padding: "10px 14px",
+                      borderBottom: "1px solid #f0f0f0",
+                      background: r.action === "updated" ? "#f0fff4" : r.action.startsWith("failed") ? "#fff5f5" : "#fafafa",
+                    }}>
+                      <p style={{ fontSize: "13px", fontWeight: 700, marginBottom: "4px" }}>
+                        {r.action === "updated" ? "✅" : r.action.startsWith("failed") ? "❌" : "⏭"} {r.name}
+                      </p>
+                      {r.tags.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                          {r.tags.map(tag => (
+                            <span key={tag} style={{
+                              background: "#e9d8fd", color: "#553c9a", borderRadius: "6px",
+                              padding: "2px 8px", fontSize: "11px", fontWeight: 600,
+                            }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {r.action.startsWith("failed") && (
+                        <p style={{ fontSize: "11px", color: "#e53e3e", marginTop: "2px" }}>{r.action}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </div>

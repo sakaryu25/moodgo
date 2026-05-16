@@ -1226,17 +1226,21 @@ export default function Home() {
           const data = await parseJsonResponse(res) as any;
 
           if (!res.ok) {
-            // エリア特定に失敗しても座標は使えるのでフォールバック
             console.warn("エリア特定失敗:", data?.error, "Google status:", data?.googleStatus, data?.googleMessage);
             setSelectedArea("現在地周辺");
             setLocationDisplayArea("現在地周辺");
           } else {
-            setSelectedArea(data?.area || "現在地周辺");
-            setLocationDisplayArea(data?.displayArea || data?.area || "現在地周辺");
+            const raw: string = data?.formattedAddress || data?.displayArea || data?.area || "現在地周辺";
+            const areaName = raw
+              .replace(/^日本[、,]\s*/, "")
+              .replace(/^〒\d{3}-\d{4}\s*/, "")
+              .replace(/[、,]?\s*日本$/, "")
+              .trim();
+            setSelectedArea(areaName);
+            setLocationDisplayArea(areaName);
           }
         } catch (error) {
           console.error(error);
-          // 位置情報の座標自体は取れているのでフォールバック
           setSelectedArea("現在地周辺");
           setLocationDisplayArea("現在地周辺");
         } finally {
@@ -1309,6 +1313,15 @@ export default function Home() {
     return Math.max(3, Math.min(120, Math.round((oneWayMins / 60) * maxSpeed)));
   }
 
+  // 車・バイク・なんでも＋長時間の場合、近場を後ろに回す最小半径
+  function calcMinRadiusKm(transports: string[], time: string): number {
+    const isFar = transports.some(t => ["車", "バイク", "なんでも"].includes(t));
+    if (!isFar) return 0;
+    if (time === "6時間以上") return 25;
+    if (time === "4~6時間")   return 15;
+    return 0;
+  }
+
   // ── 時間潰したい: 近隣スポットをランダム取得 ──────────────────────────────
   const fetchRandomSpots = async () => {
     setRandomFacilities(null);
@@ -1342,7 +1355,10 @@ export default function Home() {
     }
   };
 
-  const openResults = async (refineText?: string) => {
+  const openResults = async (refineText?: string, geocodedLat?: number, geocodedLng?: number) => {
+    // ジオコードで取得した座標を優先使用（setStateは非同期のためstateに反映前でも使えるよう引数で受け取る）
+    const effectiveLat = geocodedLat ?? originLat;
+    const effectiveLng = geocodedLng ?? originLng;
     // ── 新規検索開始時に前回の施設ステートを全クリア ──────────────────────────
     // 複数の検索結果が Step11 に混在しないようにする
     setNatureFacilities(null);
@@ -1372,7 +1388,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbTravel.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbTravel.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, preferFar: true }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1390,8 +1406,8 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subCategory: travelSubCategory,
-            lat:         originLat ?? 0,
-            lng:         originLng ?? 0,
+            lat:         effectiveLat ?? 0,
+            lng:         effectiveLng ?? 0,
             areaLabel,
             transport:   selectedTransports.length > 0 ? selectedTransports : undefined,
           }),
@@ -1426,7 +1442,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbSports.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbSports.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1444,10 +1460,15 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subCategory: sportsSubCategory,
-            lat:         originLat ?? 0,
-            lng:         originLng ?? 0,
+            lat:         effectiveLat ?? 0,
+            lng:         effectiveLng ?? 0,
             areaLabel,
             transport:   selectedTransports.length > 0 ? selectedTransports : undefined,
+            time:        selectedTime || undefined,
+            companion:   selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:    freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1480,7 +1501,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbFocus.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbFocus.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1498,10 +1519,15 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subCategory: focusSubCategory,
-            lat:         originLat ?? 0,
-            lng:         originLng ?? 0,
+            lat:         effectiveLat ?? 0,
+            lng:         effectiveLng ?? 0,
             areaLabel,
             transport:   selectedTransports.length > 0 ? selectedTransports : undefined,
+            time:        selectedTime || undefined,
+            companion:   selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:    freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1534,7 +1560,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbDrive.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbDrive.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1552,10 +1578,15 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subCategory: driveSubCategory,
-            lat:         originLat ?? 0,
-            lng:         originLng ?? 0,
+            lat:         effectiveLat ?? 0,
+            lng:         effectiveLng ?? 0,
             areaLabel,
             transport:   ["車"],
+            time:        selectedTime || undefined,
+            companion:   selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:    freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1590,7 +1621,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbNature.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbNature.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1608,10 +1639,15 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subGenre:      natureSubGenre,
-            lat:           originLat ?? 0,
-            lng:           originLng ?? 0,
+            lat:           effectiveLat ?? 0,
+            lng:           effectiveLng ?? 0,
             areaLabel,
             transport:     selectedTransports.length > 0 ? selectedTransports : undefined,
+            time:          selectedTime || undefined,
+            companion:     selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:      freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1645,7 +1681,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbCafe.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbCafe.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1664,11 +1700,16 @@ export default function Home() {
           body: JSON.stringify({
             subCategory:  cafeSubCategory,
             detail:       cafeDetail ?? undefined,
-            lat:          originLat ?? 0,
-            lng:          originLng ?? 0,
+            lat:          effectiveLat ?? 0,
+            lng:          effectiveLng ?? 0,
             areaLabel,
             transport:    selectedTransports.length > 0 ? selectedTransports : undefined,
             distancePref: cafeDistancePref ?? undefined,
+            time:         selectedTime || undefined,
+            companion:    selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:     freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1701,7 +1742,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbWaiWai.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbWaiWai.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1719,11 +1760,16 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             subCategory: waiWaiSubCategory,
-            lat:         originLat ?? 0,
-            lng:         originLng ?? 0,
+            lat:         effectiveLat ?? 0,
+            lng:         effectiveLng ?? 0,
             areaLabel,
             transport:   selectedTransports.length > 0 ? selectedTransports : undefined,
             age:         selectedAge || undefined,
+            time:        selectedTime || undefined,
+            companion:   selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord:    freeWord || undefined,
           }),
         });
         const data = await res.json();
@@ -1757,7 +1803,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbOnsen.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 10 }),
+            body: JSON.stringify({ mustTags: _sbOnsen.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1775,8 +1821,8 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             category: onsenCategory,
-            lat: originLat ?? 0,
-            lng: originLng ?? 0,
+            lat: effectiveLat ?? 0,
+            lng: effectiveLng ?? 0,
             areaLabel,
             transport: selectedTransports.length > 0 ? selectedTransports : undefined,
             time: selectedTime || undefined,
@@ -1819,9 +1865,14 @@ export default function Home() {
         }
       }
 
-      const refinedAnswers = refineText
-        ? { ...answers, freeWord: [answers.freeWord, refineText].filter(Boolean).join(" / ") }
-        : answers;
+      const refinedAnswers = {
+        ...(refineText
+          ? { ...answers, freeWord: [answers.freeWord, refineText].filter(Boolean).join(" / ") }
+          : answers),
+        // ジオコードで取得した座標を優先使用（setStateは非同期のためstateより引数を優先）
+        originLat: effectiveLat,
+        originLng: effectiveLng,
+      };
 
       const res = await fetch("/api/recommend", {
         method: "POST",
@@ -4934,9 +4985,13 @@ export default function Home() {
                   <input
                     type="text"
                     value={selectedArea}
+                    onFocus={() => {
+                      setOriginLat(undefined);
+                      setOriginLng(undefined);
+                      setLocationDisplayArea("");
+                    }}
                     onChange={(e) => {
                       setSelectedArea(e.target.value);
-                      // 手動入力時はGPS由来の情報をリセット
                       setOriginLat(undefined);
                       setOriginLng(undefined);
                       setLocationDisplayArea("");
@@ -4956,6 +5011,14 @@ export default function Home() {
                       boxSizing: "border-box",
                     }}
                   />
+                  {locationDisplayArea && !selectedArea && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px", padding: "8px 12px", background: "#f0fdf4", borderRadius: "12px", border: "1px solid #bbf7d0" }}>
+                      <span style={{ fontSize: "16px" }}>📍</span>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#166534" }}>{locationDisplayArea} を使用中</span>
+                      <button onClick={() => { setLocationDisplayArea(""); setOriginLat(undefined); setOriginLng(undefined); }}
+                        style={{ marginLeft: "auto", background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "12px", padding: "0" }}>✕</button>
+                    </div>
+                  )}
                   <div style={{ fontSize: "13px", opacity: 0.75, lineHeight: 1.6 }}>
                     {lang === "en" ? UI_EN.step10Helper : "現在地がうまく取れない場合は、エリア名をそのまま入力してください。"}
                   </div>
@@ -4979,7 +5042,25 @@ export default function Home() {
                     {lang === "en" ? UI_EN.back : "戻る"}
                   </button>
                   <button
-                    onClick={() => { if (selectedMood === "時間潰したい") { fetchRandomSpots(); } else { openResults(); } }}
+                    onClick={async () => {
+                      // 手入力エリア名をジオコードしてから検索（GPS未使用時）
+                      if (!originLat && !originLng && selectedArea.trim()) {
+                        try {
+                          const geoRes = await fetch(`/api/geocode?area=${encodeURIComponent(selectedArea.trim())}`);
+                          const geoData = await geoRes.json();
+                          if (geoData.ok && geoData.lat && geoData.lng) {
+                            setOriginLat(geoData.lat);
+                            setOriginLng(geoData.lng);
+                            setLocationDisplayArea(selectedArea.trim());
+                            // setStateは非同期のため、直接openResultsに座標を渡す
+                            if (selectedMood === "時間潰したい") { fetchRandomSpots(); }
+                            else { await openResults(undefined, geoData.lat, geoData.lng); }
+                            return;
+                          }
+                        } catch { /* geocode失敗時はそのまま検索 */ }
+                      }
+                      if (selectedMood === "時間潰したい") { fetchRandomSpots(); } else { openResults(); }
+                    }}
                     style={{ ...primaryButtonStyle, flex: 1 }}
                   >
                     {isLoadingRecommendations || isLoadingOnsen || isLoadingNature || isLoadingCafe || isLoadingWaiWai || isLoadingDrive || isLoadingFocus || isLoadingSports || isLoadingTravel || isLoadingRandom

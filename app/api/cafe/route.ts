@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { CafeSubCategory, CafeDetail, CafeDistancePref, CafeRequest, CafeApiResponse } from "@/types/cafe";
 import type { PlaceResponse } from "@/types/onsen";
+import { calcRadiusKm as calcRadiusKmFromTime, isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ────────────────────────────────────────────────────────────────────────────
 // カフェ専用 API
@@ -738,10 +739,18 @@ async function geocodeAddress(
 // ────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<CafeRequest>;
-    const { subCategory, detail, areaLabel = "現在地周辺", transport } = body;
+    const body = (await req.json()) as Partial<CafeRequest> & {
+      time?: string;
+      companion?: string;
+      budget?: number;
+      freeWord?: string;
+    };
+    const { subCategory, detail, areaLabel = "現在地周辺", transport, time, companion, budget, freeWord } = body;
     const lat = body.lat;
     const lng = body.lng;
+
+    if (companion) console.log(`[cafe] companion="${companion}"`);
+    if (freeWord)  console.log(`[cafe] freeWord="${freeWord}"`);
 
     if (!subCategory || !SUB_CATEGORY_META[subCategory]) {
       return NextResponse.json(
@@ -774,12 +783,22 @@ export async function POST(req: NextRequest) {
 
     const meta         = SUB_CATEGORY_META[subCategory];
     const distancePref = body.distancePref;
-    const baseRadiusM  = calcRadiusM(transport);
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    const baseRadiusM  = (time && transportArr.length > 0)
+      ? calcRadiusKmFromTime(transportArr, time) * 1000
+      : calcRadiusM(transport);
 
     // ── 動的クエリ生成 ─────────────────────────────────────────────────
     // 近場のみエリア名をクエリに付加（ほどほど・遠くはオフセットセンター戦略で補う）
     const useArea     = !distancePref || distancePref === "近場";
-    const queries     = buildQueries(subCategory, detail, areaLabel, useArea);
+    const queriesBase = buildQueries(subCategory, detail, areaLabel, useArea);
+    // freeWord があれば Google クエリに付加
+    const queries: typeof queriesBase = {
+      ...queriesBase,
+      googleQueries: freeWord
+        ? queriesBase.googleQueries.map(q => `${q} ${freeWord}`)
+        : queriesBase.googleQueries,
+    };
     const description = buildDescription(subCategory, detail);
 
     // ── 距離設定を決定 ─────────────────────────────────────────────────
@@ -949,6 +968,13 @@ export async function POST(req: NextRequest) {
       }
       return (b.rating ?? 0) - (a.rating ?? 0); // 評価高い順
     });
+
+    // ── 予算フィルタ ──────────────────────────────────────────────────────
+    if (budget && budget > 0) {
+      const budgetFiltered = places.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+      if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
+      console.log(`[cafe] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
+    }
 
     console.log(`[cafe] 最終 ${places.length}件`);
 

@@ -29,15 +29,15 @@ export function getOnsenTags(category: OnsenCategory | null): SubcategoryTagsRes
   const fallbackBase = ["#温泉"];
   switch (category) {
     case "natural_onsen":
-      return { tags: ["#天然温泉"],  fallback: fallbackBase, label: "天然温泉・日帰り温泉",     radiusKm: 20 };
+      return { tags: ["#温泉"],   fallback: fallbackBase, label: "天然温泉・日帰り温泉",     radiusKm: 20 };
     case "sento":
-      return { tags: ["#銭湯"],      fallback: fallbackBase, label: "銭湯",                     radiusKm: 10 };
+      return { tags: ["#温泉"],   fallback: fallbackBase, label: "銭湯",                     radiusKm: 10 };
     case "super_sento":
-      return { tags: ["#大型銭湯"],  fallback: fallbackBase, label: "スーパー銭湯・健康ランド", radiusKm: 20 };
+      return { tags: ["#温泉"],   fallback: fallbackBase, label: "スーパー銭湯・健康ランド", radiusKm: 20 };
     case "sauna_ganban":
-      return { tags: ["#サウナ"],    fallback: fallbackBase, label: "サウナ・岩盤浴",            radiusKm: 15 };
+      return { tags: ["#サウナ"], fallback: fallbackBase, label: "サウナ・岩盤浴",            radiusKm: 15 };
     default:
-      return { tags: fallbackBase,   fallback: fallbackBase, label: "温泉施設全般",             radiusKm: 20 };
+      return { tags: fallbackBase, fallback: fallbackBase, label: "温泉施設全般",             radiusKm: 20 };
   }
 }
 
@@ -100,7 +100,7 @@ export function getWaiWaiTags(subCategory: WaiWaiSubCategory | null): Subcategor
     case "active":
       return { tags: ["#体動かしたい"],   fallback: fallbackBase, label: "💪 体を動かしてはしゃぎたい",     radiusKm: 15 };
     case "party":
-      return { tags: ["#体験型ゲーム"],   fallback: fallbackBase, label: "🎤 歌って飲んで騒ぎたい",         radiusKm: 10 };
+      return { tags: ["#カラオケ"],        fallback: fallbackBase, label: "🎤 歌って飲んで騒ぎたい",         radiusKm: 10 };
     case "experience":
       return { tags: ["#体験型ゲーム"],   fallback: fallbackBase, label: "🎲 非日常の体験で盛り上がりたい", radiusKm: 15 };
     case "food_drink":
@@ -142,7 +142,7 @@ export function getFocusTags(subCategory: FocusSubCategory | null): SubcategoryT
     case "family_restaurant":
       return { tags: ["#ファミレス"], fallback: fallbackBase, label: "🍳 ファミレスで深夜まで粘る",   radiusKm: 10 };
     case "netcafe_library":
-      return { tags: ["#book場"],     fallback: fallbackBase, label: "📚 漫画・本に囲まれてこもる",   radiusKm: 10 };
+      return { tags: ["#勉強場"],     fallback: fallbackBase, label: "📚 漫画・本に囲まれてこもる",   radiusKm: 10 };
     default:
       return { tags: fallbackBase,    fallback: fallbackBase, label: "集中スポット",                 radiusKm: 10 };
   }
@@ -174,14 +174,14 @@ export function getTravelTags(subCategory: TravelSubCategory | null): Subcategor
   const fallbackBase = ["#遠くに行きたい"];
   switch (subCategory) {
     case "power_spot":
-      return { tags: ["#パワースポット"],  fallback: fallbackBase, label: "⛩️ パワースポット・歴史ある場所", radiusKm: 500 };
+      return { tags: ["#パワースポット"],  fallback: fallbackBase, label: "⛩️ パワースポット・歴史ある場所", radiusKm: 150 };
     case "theme_park":
-      return { tags: ["#テーマパーク"],    fallback: fallbackBase, label: "🎡 テーマパーク・別世界",         radiusKm: 500 };
+      return { tags: ["#テーマパーク"],    fallback: fallbackBase, label: "🎡 テーマパーク・別世界",         radiusKm: 150 };
     case "town_walk":
-      return { tags: ["#お散歩"],          fallback: fallbackBase, label: "🚶 知らない街をぶらぶら",         radiusKm: 500 };
+      return { tags: ["#お散歩"],          fallback: fallbackBase, label: "🚶 知らない街をぶらぶら",         radiusKm: 150 };
     case "super_view":
-      return { tags: ["#絶景スポット"],    fallback: fallbackBase, label: "🌄 息を呑む絶景・大自然",         radiusKm: 500 };
+      return { tags: ["#絶景スポット"],    fallback: fallbackBase, label: "🌄 息を呑む絶景・大自然",         radiusKm: 150 };
     default:
-      return { tags: fallbackBase,         fallback: fallbackBase, label: "遠くのおでかけスポット",         radiusKm: 500 };
+      return { tags: fallbackBase,         fallback: fallbackBase, label: "遠くのおでかけスポット",         radiusKm: 150 };
   }
 }

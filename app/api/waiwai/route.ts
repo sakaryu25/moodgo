@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { WaiWaiSubCategory, WaiWaiRequest, WaiWaiApiResponse } from "@/types/waiwai";
 import type { PlaceResponse } from "@/types/onsen";
+import { calcRadiusKm as calcRadiusKmFromTime, isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ────────────────────────────────────────────────────────────────────────────
 // わいわい楽しみたい専用 API
@@ -557,10 +558,18 @@ const ADULT_NG_WORDS = [
 // ────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<WaiWaiRequest>;
-    const { subCategory, areaLabel = "現在地周辺", transport, age } = body;
+    const body = (await req.json()) as Partial<WaiWaiRequest> & {
+      time?: string;
+      companion?: string;
+      budget?: number;
+      freeWord?: string;
+    };
+    const { subCategory, areaLabel = "現在地周辺", transport, age, time, companion, budget, freeWord } = body;
     const lat = body.lat;
     const lng = body.lng;
+
+    if (companion) console.log(`[waiwai] companion="${companion}"`);
+    if (freeWord)  console.log(`[waiwai] freeWord="${freeWord}"`);
 
     // 10代ユーザー判定
     const isTeen = age === "10代";
@@ -595,7 +604,16 @@ export async function POST(req: NextRequest) {
     }
 
     const metaBase     = SUB_CATEGORY_META[subCategory];
-    const { yahooDistKm, googleRadiusM } = getRadii(transport);
+
+    // time + transport が揃っている場合は calcRadiusKm を使用
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    let { yahooDistKm, googleRadiusM } = getRadii(transport);
+    if (time && transportArr.length > 0) {
+      const calcKm = calcRadiusKmFromTime(transportArr, time);
+      googleRadiusM = Math.round(calcKm * 1000);
+      yahooDistKm   = Math.min(calcKm, 20);
+    }
+
     const hpRange     = hotpepperRange(transport);
     // area prefix（クエリの先頭に付けるエリア名）
     const area        = areaLabel && areaLabel !== "現在地周辺" ? `${areaLabel} ` : "";
@@ -666,7 +684,8 @@ export async function POST(req: NextRequest) {
     if (meta.usesGoogle) {
       const googleSearchRadiusM = Math.round(googleRadiusM * 1.5);
       const googleTasks = meta.googleQueries.map(q => {
-        const query = q.replace("{area}", area);
+        const base  = q.replace("{area}", area);
+        const query = freeWord ? `${base} ${freeWord}` : base;
         return searchGooglePlaces(query, searchLat, searchLng, googleSearchRadiusM, googleKey);
       });
       const googleSettled = await Promise.allSettled(googleTasks);
@@ -772,6 +791,13 @@ export async function POST(req: NextRequest) {
     }
     // inRange が 0 件の場合はフォールバック（スポット0件回避）で元リストを維持
     console.log(`[waiwai] 距離フィルタ後 ${places.length}件（上限 ${hardLimitKm}km）`);
+
+    // ── 予算フィルタ ─────────────────────────────────────────────────────
+    if (budget && budget > 0) {
+      const budgetFiltered = places.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+      if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
+      console.log(`[waiwai] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
+    }
 
     console.log(`[waiwai] 最終 ${places.length}件`);
 

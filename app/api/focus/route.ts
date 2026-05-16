@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { FocusSubCategory, FocusRequest, FocusApiResponse } from "@/types/focus";
 import type { PlaceResponse } from "@/types/onsen";
+import { calcRadiusKm as calcRadiusKmFromTime, isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 集中したい専用 API
@@ -546,10 +547,18 @@ async function runYahooFallback(
 // ────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<FocusRequest>;
-    const { subCategory, areaLabel = "現在地周辺", transport } = body;
+    const body = (await req.json()) as Partial<FocusRequest> & {
+      time?: string;
+      companion?: string;
+      budget?: number;
+      freeWord?: string;
+    };
+    const { subCategory, areaLabel = "現在地周辺", transport, time, companion, budget, freeWord } = body;
     const lat = body.lat;
     const lng = body.lng;
+
+    if (companion) console.log(`[focus] companion="${companion}"`);
+    if (freeWord)  console.log(`[focus] freeWord="${freeWord}"`);
 
     if (!subCategory || !FOCUS_CONFIG[subCategory]) {
       return NextResponse.json(
@@ -581,8 +590,13 @@ export async function POST(req: NextRequest) {
     }
 
     const config = FOCUS_CONFIG[subCategory];
-    const radiusM = getRadiusM(transport);
-    console.log(`[focus] ▶ ${config.label} area="${areaLabel}" r=${radiusM / 1000}km transport="${Array.isArray(transport) ? transport.join(",") : (transport ?? "なし")}"`);
+
+    // time + transport が揃っている場合は calcRadiusKm を使用
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    const radiusM = (time && transportArr.length > 0)
+      ? calcRadiusKmFromTime(transportArr, time) * 1000
+      : getRadiusM(transport);
+    console.log(`[focus] ▶ ${config.label} area="${areaLabel}" r=${radiusM / 1000}km transport="${transportArr.join(",") || "なし"}" time="${time ?? "-"}"`);
 
     // ── 段階的フォールバック検索 ──────────────────────────────────────────────
     let places: PlaceResponse[];
@@ -590,6 +604,13 @@ export async function POST(req: NextRequest) {
       places = await runGoogleFallback(config, areaLabel, searchLat, searchLng, radiusM, googleKey, transport);
     } else {
       places = await runYahooFallback(config, areaLabel, searchLat, searchLng, googleKey, transport);
+    }
+
+    // ── 予算フィルタ ──────────────────────────────────────────────────────────
+    if (budget && budget > 0) {
+      const budgetFiltered = places.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+      if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
+      console.log(`[focus] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
     }
 
     console.log(`[focus] 最終 ${places.length}件`);

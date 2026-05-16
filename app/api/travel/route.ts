@@ -14,9 +14,9 @@ import type { PlaceResponse } from "@/types/onsen";
 //   各点で50km半径検索 → Haversine でドーナツフィルタ
 //   ※ 富士急ハイランド(東京SW約100km)→ SW60km + SW150km 両方の検索圏内
 //
-// ■ 距離設定
-//   車  : inner=50km / outer=400km / 主リング150km / Yahoo=400km
-//   電車: inner=60km / outer=500km / 主リング200km / Yahoo=500km
+// ■ 距離設定（2〜3県跨ぎ想定）
+//   車  : inner=30km / outer=150km / 主リング100km / Yahoo=150km
+//   電車: inner=30km / outer=150km / 主リング100km / Yahoo=150km
 //
 // ■ 4段階フォールバック
 //   STEP 1: 近リング8方向 × 厳密クエリ + 高評価 + ドーナツfull
@@ -54,13 +54,13 @@ function getDonut(transport: string | string[] | undefined): DonutConfig {
   const t = Array.isArray(transport) ? transport.join(",") : (transport ?? "");
   // ※「電車・バス」を先にチェック（"車"が"電車"にも含まれるため順序が重要）
   if (t.includes("電車") || t.includes("バス") || t.includes("train") || t.includes("bus")) {
-    return { innerM: 60_000, outerM: 500_000, nearRingKm: 100, mainRingKm: 220, yahooDistKm: 500 };
+    return { innerM: 30_000, outerM: 150_000, nearRingKm: 60, mainRingKm: 100, yahooDistKm: 150 };
   }
   if (t.includes("車") || t.includes("バイク") || t.includes("car") || t.includes("bike")) {
-    return { innerM: 50_000, outerM: 400_000, nearRingKm: 80, mainRingKm: 180, yahooDistKm: 400 };
+    return { innerM: 30_000, outerM: 150_000, nearRingKm: 60, mainRingKm: 100, yahooDistKm: 150 };
   }
   // 徒歩・自転車・なんでも → 電車相当
-  return { innerM: 60_000, outerM: 500_000, nearRingKm: 100, mainRingKm: 220, yahooDistKm: 500 };
+  return { innerM: 30_000, outerM: 150_000, nearRingKm: 60, mainRingKm: 100, yahooDistKm: 150 };
 }
 
 // ── 8方向 × 指定距離の検索センター配列 ─────────────────────────────────────

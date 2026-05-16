@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { DriveSubCategory, DriveRequest, DriveApiResponse } from "@/types/drive";
 import type { PlaceResponse } from "@/types/onsen";
+import { calcRadiusKm as calcRadiusKmFromTime, isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ────────────────────────────────────────────────────────────────────────────
 // ドライブしたい専用 API
@@ -532,10 +533,18 @@ async function runYahooFallback(
 // ────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<DriveRequest>;
-    const { subCategory, areaLabel = "現在地周辺", transport } = body;
+    const body = (await req.json()) as Partial<DriveRequest> & {
+      time?: string;
+      companion?: string;
+      budget?: number;
+      freeWord?: string;
+    };
+    const { subCategory, areaLabel = "現在地周辺", transport, time, companion, budget, freeWord } = body;
     const lat = body.lat;
     const lng = body.lng;
+
+    if (companion) console.log(`[drive] companion="${companion}"`);
+    if (freeWord)  console.log(`[drive] freeWord="${freeWord}"`);
 
     if (!subCategory || !DRIVE_CONFIG[subCategory]) {
       return NextResponse.json(
@@ -565,8 +574,17 @@ export async function POST(req: NextRequest) {
       console.log(`[drive] ジオコード "${areaLabel}" → (${searchLat.toFixed(4)}, ${searchLng.toFixed(4)})`);
     }
 
-    const config = DRIVE_CONFIG[subCategory];
-    console.log(`[drive] ▶ ${config.label} area="${areaLabel}" transport="${Array.isArray(transport) ? transport.join(",") : (transport ?? "なし")}"`);
+    // time + transport が揃っている場合は calcRadiusKm で上書き
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    const calcedRadiusM = (time && transportArr.length > 0)
+      ? calcRadiusKmFromTime(transportArr, time) * 1000
+      : null;
+
+    const config = { ...DRIVE_CONFIG[subCategory] } as SubCategoryConfig;
+    if (calcedRadiusM !== null && config.api === "google") {
+      (config as GoogleConfig).initialRadiusM = Math.max(calcedRadiusM, 5000);
+    }
+    console.log(`[drive] ▶ ${config.label} area="${areaLabel}" transport="${transportArr.join(",") || "なし"}" time="${time ?? "-"}"`);
 
     // ── 段階的フォールバック検索 ──────────────────────────────────────────────
     let places: PlaceResponse[];
@@ -574,6 +592,13 @@ export async function POST(req: NextRequest) {
       places = await runGoogleFallback(config, areaLabel, searchLat, searchLng, googleKey, transport);
     } else {
       places = await runYahooFallback(config, areaLabel, searchLat, searchLng, googleKey, transport);
+    }
+
+    // ── 予算フィルタ ──────────────────────────────────────────────────────────
+    if (budget && budget > 0) {
+      const budgetFiltered = places.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+      if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
+      console.log(`[drive] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
     }
 
     console.log(`[drive] 最終 ${places.length}件`);

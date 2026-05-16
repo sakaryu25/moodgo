@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { NatureSubGenre, NatureRequest, NatureApiResponse } from "@/types/nature";
 import type { PlaceResponse } from "@/types/onsen";
+import { calcRadiusKm as calcRadiusKmFromTime, isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 自然感じたい専用 API
@@ -229,10 +230,18 @@ function dedupByAddress(places: PlaceResponse[]): PlaceResponse[] {
 // ────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<NatureRequest>;
-    const { subGenre, areaLabel = "現在地周辺", transport } = body;
+    const body = (await req.json()) as Partial<NatureRequest> & {
+      time?: string;
+      companion?: string;
+      budget?: number;
+      freeWord?: string;
+    };
+    const { subGenre, areaLabel = "現在地周辺", transport, time, companion, budget, freeWord } = body;
     const lat = body.lat;
     const lng = body.lng;
+
+    if (companion) console.log(`[nature] companion="${companion}"`);
+    if (freeWord)  console.log(`[nature] freeWord="${freeWord}"`);
 
     if (!subGenre || !SUB_GENRE_CONFIG[subGenre]) {
       return NextResponse.json(
@@ -262,15 +271,26 @@ export async function POST(req: NextRequest) {
       console.log(`[nature] ジオコード "${areaLabel}" → (${searchLat.toFixed(4)}, ${searchLng.toFixed(4)})`);
     }
 
-    const config  = SUB_GENRE_CONFIG[subGenre];
-    const radiusM = getRadiusM(transport);
-    console.log(`[nature] ▶ ${config.label} radius=${radiusM / 1000}km transport="${Array.isArray(transport) ? transport.join(",") : (transport ?? "未指定")}"`);
+    const config = SUB_GENRE_CONFIG[subGenre];
+
+    // time + transport が揃っている場合は calcRadiusKm で計算、そうでなければ従来ロジック
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    const radiusM = (time && transportArr.length > 0)
+      ? calcRadiusKmFromTime(transportArr, time) * 1000
+      : getRadiusM(transport);
+    console.log(`[nature] ▶ ${config.label} radius=${radiusM / 1000}km transport="${transportArr.join(",") || "未指定"}" time="${time ?? "-"}"`);
+
+    // freeWord があれば各クエリに付加
+    const buildQuery = (q: string) => {
+      const base = buildTextQuery(q, areaLabel);
+      return freeWord ? `${base} ${freeWord}` : base;
+    };
 
     // ── 全クエリを並列実行 ────────────────────────────────────────────────
     const results = await Promise.allSettled(
       config.queries.map(q =>
         searchGooglePlaces(
-          buildTextQuery(q, areaLabel),
+          buildQuery(q),
           searchLat, searchLng, radiusM,
           googleKey,
           20,
@@ -324,8 +344,15 @@ export async function POST(req: NextRequest) {
     };
     const mapped = allPlaces.map(p => mapToPlaceResponse(p, googleKey, opts));
 
-    // ── 重複除去 → 最大10件 ──────────────────────────────────────────────
-    const places = dedupByAddress(dedupByNamePrefix(dedup(mapped))).slice(0, 10);
+    // ── 重複除去 → 最大20件 ──────────────────────────────────────────────
+    let places = dedupByAddress(dedupByNamePrefix(dedup(mapped))).slice(0, 20);
+
+    // ── 予算フィルタ ──────────────────────────────────────────────────────
+    if (budget && budget > 0) {
+      const budgetFiltered = places.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+      if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
+    }
+
     console.log(`[nature] 最終 ${places.length}件`);
 
     return NextResponse.json({

@@ -14,11 +14,12 @@
 //   budget        number?
 //   area          string?  エリア名（テキスト表示用）
 //   mustTags      string[]? ジャンル以外のカスタムタグ（非食事パスから呼び出す場合）
-//   limit         number?  最大件数（デフォルト: 10）
+//   limit         number?  最大件数（デフォルト: 20）
 
 import { NextRequest, NextResponse } from "next/server";
 import { buildFoodSearchTags } from "@/lib/food-tag-map";
 import { searchPlacesByTags } from "@/lib/supabase-places";
+import { calcRadiusKm } from "@/lib/calc-radius";
 
 export const runtime = "nodejs";
 
@@ -30,10 +31,16 @@ export async function POST(req: NextRequest) {
       subAnswer    = "",
       lat          = 0,
       lng          = 0,
-      radiusKm     = 10,
+      radiusKm: bodyRadiusKm = 10,
       transport    = "",
-      limit        = 10,
+      limit        = 20,
       mustTags: customMustTags,
+      time,
+      companion,
+      budget,
+      freeWord,
+      minRadiusKm,
+      preferFar,
     }: {
       genreAnswer?: string;
       subAnswer?:   string;
@@ -43,7 +50,21 @@ export async function POST(req: NextRequest) {
       transport?:   string | string[];
       limit?:       number;
       mustTags?:    string[];
+      time?:        string;
+      companion?:   string;
+      budget?:      number;
+      freeWord?:    string;
+      minRadiusKm?: number;
+      preferFar?:   boolean;
     } = body;
+
+    // time + transport が揃っている場合は calcRadiusKm で上書き
+    const transportArr = Array.isArray(transport) ? transport : (transport ? [transport] : []);
+    const radiusKm = (time && transportArr.length > 0)
+      ? calcRadiusKm(transportArr, time)
+      : bodyRadiusKm;
+
+    if (freeWord) console.log(`[/api/places] freeWord="${freeWord}"`);
 
     const googleApiKey = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY ?? "";
 
@@ -75,6 +96,10 @@ export async function POST(req: NextRequest) {
       transport,
       limit,
       googleApiKey,
+      companion,
+      budget,
+      minRadiusKm,
+      preferFar,
     });
 
     return NextResponse.json({

@@ -98,7 +98,7 @@ function pickAreaFromResult(result?: GoogleGeocodeResult) {
 }
 
 async function reverseGeocode(latitude: number, longitude: number) {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json(

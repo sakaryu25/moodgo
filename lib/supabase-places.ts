@@ -3,6 +3,7 @@
 
 import { supabase } from "@/lib/supabase";
 import type { PlaceResponse } from "@/types/onsen";
+import { isPriceWithinBudget } from "@/lib/calc-radius";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase レコード型
@@ -93,11 +94,20 @@ async function fetchGooglePlaceDetail(
     if (!res.ok) return null;
     const d = await res.json();
 
-    // 写真URL最大5枚
+    // 写真URL最大5枚（skipHttpRedirect=trueで実URLを解決し地図タイルを除外）
     const photoUrls: string[] = [];
     for (const ph of (d.photos ?? []).slice(0, 5)) {
-      const pUrl = `https://places.googleapis.com/v1/${ph.name}/media?maxWidthPx=800&key=${apiKey}`;
-      photoUrls.push(pUrl);
+      try {
+        const mediaUrl = `https://places.googleapis.com/v1/${ph.name}/media?maxWidthPx=800&skipHttpRedirect=true`;
+        const mRes = await fetch(mediaUrl, { headers: { "X-Goog-Api-Key": apiKey } });
+        if (!mRes.ok) continue;
+        const mData = await mRes.json().catch(() => null);
+        const photoUri: string = mData?.photoUri ?? "";
+        // lh3.googleusercontent.com 等の実写真URLのみ使用（地図タイルを除外）
+        if (photoUri && photoUri.startsWith("https://lh3.googleusercontent.com")) {
+          photoUrls.push(photoUri);
+        }
+      } catch { /* skip */ }
     }
 
     // 営業時間テキスト
@@ -173,10 +183,20 @@ async function convertToPlaceResponse(
     : null;
   const distanceInfo = distM !== null ? formatDistance(distM, transport) : "距離不明";
 
-  // Supabase 登録写真を先頭に並べる
+  // 地図タイルURLを除外する判定
+  const isRealPhotoUrl = (url: string) =>
+    !!url &&
+    !url.includes("maps.googleapis.com") &&
+    !url.includes("maps.gstatic.com") &&
+    !url.includes("streetviewpixels") &&
+    !url.includes("geo0.ggpht.com") &&
+    !url.includes("cbk0.google.com");
+
+  // Supabase 登録写真を先頭に並べる（地図タイルを除外）
   const userPhotoUrls = photos
     .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
-    .map(p => p.photo_url);
+    .map(p => p.photo_url)
+    .filter(isRealPhotoUrl);
 
   // Google で補強
   let googleDetail: Awaited<ReturnType<typeof fetchGooglePlaceDetail>> = null;
@@ -242,6 +262,10 @@ export interface SearchPlacesOptions {
   transport?: string | string[];
   limit?: number;              // 最大件数（省略時: 20）
   googleApiKey?: string;
+  companion?: string;          // 誰と（例: "恋人", "友達", "家族", "一人"）
+  budget?: number;             // 予算上限（円）0または未定は制限なし
+  minRadiusKm?: number;        // この距離以上の場所を優先（車+長時間用）
+  preferFar?: boolean;         // 遠い場所を優先（遠くに行きたい用）
 }
 
 export async function searchPlacesByTags(
@@ -250,7 +274,7 @@ export async function searchPlacesByTags(
   if (!supabase) return [];
 
   const {
-    mustTags,
+    mustTags: mustTagsInput,
     fallbackTags = [],
     lat = 0,
     lng = 0,
@@ -258,7 +282,20 @@ export async function searchPlacesByTags(
     transport = "",
     limit = 20,
     googleApiKey = "",
+    companion,
+    budget,
+    minRadiusKm = 0,
+    preferFar = false,
   } = opts;
+
+  // 予算=0（無料）の場合、#無料タグを必須タグに追加
+  const mustTags = (budget === 0)
+    ? [...mustTagsInput, "#無料"]
+    : mustTagsInput;
+
+  if (companion) {
+    console.log(`[supabase-places] companion="${companion}"`);
+  }
 
   const transportStr = Array.isArray(transport) ? transport.join(",") : (transport ?? "");
 
@@ -270,36 +307,69 @@ export async function searchPlacesByTags(
     : Infinity;
   const effectiveRadiusKm = Math.min(radiusKm, transportMaxKm);
 
-  // ── Step1: mustTags すべてを含むスポットを検索 ──────────────────────────
-  let places = await queryByTags(mustTags, limit * 2);
+  // ── 大量プール取得（距離拡張のために多めに取得）──────────────────────
+  const fetchLimit = Math.max(limit * 10, 200);
+  let places = await queryByTags(mustTags, fetchLimit);
 
-  // ── Step2: ヒット0件 → fallbackTags（sub タグなし）で再検索 ────────────
+  // ── fallbackTags で再検索 ────────────────────────────────────────────
   if (places.length === 0 && fallbackTags.length > 0 && fallbackTags.join() !== mustTags.join()) {
-    places = await queryByTags(fallbackTags, limit * 2);
+    places = await queryByTags(fallbackTags, fetchLimit);
   }
 
-  // ── Step3: まだ0件 → ジャンルタグのみで再検索 ─────────────────────────
+  // ── ジャンルタグのみで再検索 ─────────────────────────────────────────
   if (places.length === 0) {
     const genreOnly = mustTags.filter(t => t !== "#お腹すいた").slice(0, 1);
     if (genreOnly.length > 0) {
-      places = await queryByTags(["#お腹すいた", ...genreOnly], limit * 2);
+      places = await queryByTags(["#お腹すいた", ...genreOnly], fetchLimit);
     }
   }
 
   if (places.length === 0) return [];
 
-  // ── 距離フィルター ─────────────────────────────────────────────────────
-  const radiusM = effectiveRadiusKm * 1000;
-  const filtered = (lat === 0 && lng === 0)
-    ? places
-    : places.filter(p =>
-        p.lat != null && p.lng != null
-          ? haversineM(lat, lng, p.lat, p.lng) <= radiusM
-          : true,
-      );
+  // ── 距離付きリストを作成 ───────────────────────────────────────────────
+  const userHasLocation = lat !== 0 || lng !== 0;
 
-  const targets = filtered.length > 0 ? filtered : places;
-  const sliced = targets.slice(0, limit);
+  const withDist = places.map(p => ({
+    place: p,
+    distKm: (userHasLocation && p.lat != null && p.lng != null)
+      ? haversineM(lat, lng, p.lat, p.lng) / 1000
+      : 0,
+  }));
+
+  // ── 段階的半径拡張: limit件確保できるまで広げる ─────────────────────
+  // 1x → 1.5x → 2x → 3x → 無制限
+  const expansions = userHasLocation
+    ? [1, 1.5, 2, 3, Infinity]
+    : [Infinity];
+
+  let candidates = withDist;
+  for (const mult of expansions) {
+    const maxKm = mult === Infinity ? Infinity : effectiveRadiusKm * mult;
+    const inRange = mult === Infinity
+      ? withDist
+      : withDist.filter(x =>
+          x.place.lat != null && x.place.lng != null && x.distKm <= maxKm,
+        );
+    candidates = inRange.length > 0 ? inRange : withDist;
+    if (candidates.length >= limit) break;
+  }
+
+  // ── 順序決定（preferFar / minRadiusKm / シャッフル）────────────────
+  let sorted: SupabasePlace[];
+  if (preferFar) {
+    // 遠い順
+    candidates.sort((a, b) => b.distKm - a.distKm);
+    sorted = candidates.map(x => x.place);
+  } else if (minRadiusKm > 0) {
+    // 車+長時間: minRadiusKm以上を先頭に、その中でシャッフル
+    const far  = candidates.filter(x => x.distKm >= minRadiusKm).sort(() => Math.random() - 0.5);
+    const near = candidates.filter(x => x.distKm <  minRadiusKm).sort(() => Math.random() - 0.5);
+    sorted = [...far, ...near].map(x => x.place);
+  } else {
+    sorted = [...candidates].sort(() => Math.random() - 0.5).map(x => x.place);
+  }
+
+  const sliced = sorted.slice(0, limit);
 
   // ── 写真取得 ───────────────────────────────────────────────────────────
   const placeIds = sliced.map(p => p.id);
@@ -327,9 +397,18 @@ export async function searchPlacesByTags(
     ),
   );
 
-  return results
+  const enriched = results
     .filter(r => r.status === "fulfilled")
     .map(r => (r as PromiseFulfilledResult<PlaceResponse>).value);
+
+  // 予算フィルタ（budget > 0 の場合のみ適用）
+  if (budget && budget > 0) {
+    const budgetFiltered = enriched.filter(p => isPriceWithinBudget(p.priceLevel, budget));
+    // フィルタ後に件数が減りすぎた場合は元リストを返す（過疎対策）
+    return budgetFiltered.length >= Math.min(3, enriched.length) ? budgetFiltered : enriched;
+  }
+
+  return enriched;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
