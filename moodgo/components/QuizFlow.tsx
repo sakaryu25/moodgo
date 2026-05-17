@@ -99,6 +99,7 @@ const MOODS = [
   { key: '集中したい', label: '集中したい', Icon: BookOpen, sub: '作業・勉強' },
   { key: '体を動かしたい', label: '体を動かしたい', Icon: Activity, sub: 'スポーツ・アウトドア' },
   { key: '遠くに行きたい', label: '遠くに行きたい', Icon: Plane, sub: '小旅行・お出かけ' },
+  { key: '時間潰したい', label: '時間潰したい', Icon: Shuffle, sub: '近くのスポットをランダムに' },
 ];
 
 const MOOD_QUESTIONS: Record<string, DynamicQuestion[]> = {
@@ -138,6 +139,7 @@ const MOOD_QUESTIONS: Record<string, DynamicQuestion[]> = {
     { key: 'travel_place', question: '行きたい場所のイメージは？', options: ['自然・山・海🌊', '観光地・名所⛩️', '温泉・リゾート♨️', '都市・異文化🌆'] },
     { key: 'travel_goal', question: '旅の目的は？', options: ['非日常を味わいたい✨', '絶景を見たい🌅', '楽しみたい🎉', 'ゆっくり過ごしたい😴'] },
   ],
+  '時間潰したい': [],
 };
 
 // ─── Icon map & emoji stripper ────────────────────────────────────────────────
@@ -341,6 +343,7 @@ const MOOD_EN: Record<string, { label: string; sub: string }> = {
   '集中したい':         { label: 'Focus Mode 📚',         sub: 'Work & Study' },
   '体を動かしたい':     { label: 'Get Moving 💪',         sub: 'Sports & Outdoors' },
   '遠くに行きたい':     { label: 'Day Trip ✈️',           sub: 'Travel & Excursion' },
+  '時間潰したい':       { label: 'Just Exploring 🎲',     sub: 'Random spots nearby' },
 };
 
 const COMPANIONS_EN = ['Solo', 'Friends', 'Partner', 'Family', 'Large Group', 'With Seniors'];
@@ -616,6 +619,7 @@ export default function QuizFlow(props: Props) {
                     const pool = MOOD_QUESTIONS[m.key] ?? [];
                     onSetDynamicQuestions(pool);
                     onSetDynamicAnswers({});
+                    if (m.key === '時間潰したい') onOpenResults();
                   }}
                   activeOpacity={0.7}
                   style={[s.moodBtn, active && s.moodBtnActive]}

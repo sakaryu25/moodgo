@@ -59,6 +59,12 @@ const T = {
     cancel: 'キャンセル',
     submitting: '送信中...',
     submit: '送信',
+    sortDefault: 'おすすめ順',
+    sortRating: '評価順',
+    sortNear: '近い順',
+    filterOpenNow: '営業中のみ',
+    visited: '行った！',
+    visitedDone: '✓ 行った',
   },
   en: {
     back: 'Back',
@@ -81,8 +87,14 @@ const T = {
     cancel: 'Cancel',
     submitting: 'Sending...',
     submit: 'Send',
+    sortDefault: 'Best',
+    sortRating: 'Rating',
+    sortNear: 'Nearest',
+    filterOpenNow: 'Open now',
+    visited: 'Been there!',
+    visitedDone: '✓ Visited',
   },
-};
+} as const;
 
 type Props = {
   selectedMood: string;
@@ -148,6 +160,10 @@ export default function ResultsView(props: Props) {
   } = props;
   const t = T[lang];
 
+  const [resultSort, setResultSort] = React.useState<'default' | 'rating' | 'near'>('default');
+  const [openNowOnly, setOpenNowOnly] = React.useState(false);
+  const [visitedTitles, setVisitedTitles] = React.useState<string[]>([]);
+
   const insets = useSafeAreaInsets();
   const isFav = (title: string) => favorites.some((f) => f.title === title);
 
@@ -171,12 +187,23 @@ export default function ResultsView(props: Props) {
       ? (facilityLabel || t.defaultTitle)
       : t.areaTitle(selectedArea);
 
-  // Items to render
-  const facilityItems = facilityList
+  // Items to render (with sort & filter)
+  const parseDistanceM = (s?: string) => {
+    if (!s) return Infinity;
+    const m = s.match(/[\d.]+/);
+    const n = m ? parseFloat(m[0]) : Infinity;
+    return s.includes('km') ? n * 1000 : n;
+  };
+
+  let facilityItems = facilityList
     ? facilityList
         .filter((f) => !blockedPlaces.includes(f.name))
         .map((f) => placeToRec(f, facilityLabel))
     : recommendations.filter((r) => !blockedPlaces.includes(r.title));
+
+  if (openNowOnly) facilityItems = facilityItems.filter((i) => i.openNow === true);
+  if (resultSort === 'rating') facilityItems = [...facilityItems].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+  else if (resultSort === 'near') facilityItems = [...facilityItems].sort((a, b) => parseDistanceM(a.distanceText) - parseDistanceM(b.distanceText));
 
   return (
     <View style={s.root}>
@@ -205,6 +232,33 @@ export default function ResultsView(props: Props) {
           </View>
         ) : null}
 
+        {/* Sort & Filter controls */}
+        {!isLoading && (
+          <View style={s.controlsRow}>
+            <View style={s.sortGroup}>
+              {(['default', 'rating', 'near'] as const).map((mode) => (
+                <TouchableOpacity
+                  key={mode}
+                  onPress={() => setResultSort(mode)}
+                  style={[s.sortBtn, resultSort === mode && s.sortBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.sortBtnText, resultSort === mode && s.sortBtnTextActive]}>
+                    {mode === 'default' ? t.sortDefault : mode === 'rating' ? t.sortRating : t.sortNear}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              onPress={() => setOpenNowOnly((v) => !v)}
+              style={[s.filterBtn, openNowOnly && s.filterBtnActive]}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.filterBtnText, openNowOnly && s.filterBtnTextActive]}>{t.filterOpenNow}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Loading */}
         {isLoading && (
           <View style={s.loadingBox}>
@@ -229,7 +283,12 @@ export default function ResultsView(props: Props) {
             onToggleFavorite={() => onToggleFavorite(item)}
             onBlock={() => onBlockPlace(item.title)}
             onReport={() => onSetReportingSpot({ title: item.title, address: item.address ?? '' })}
+            onMarkVisited={() => setVisitedTitles((prev) =>
+              prev.includes(item.title) ? prev : [...prev, item.title]
+            )}
+            isVisited={visitedTitles.includes(item.title)}
             accentColor={accentColor}
+            lang={lang}
           />
         ))}
 
@@ -383,6 +442,27 @@ const s = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   labelBadgeText: { fontSize: 13, fontWeight: '600' },
+
+  // Sort & filter bar
+  controlsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12, gap: 8,
+  },
+  sortGroup: { flexDirection: 'row', gap: 6 },
+  sortBtn: {
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  sortBtnActive: { backgroundColor: '#FF6B3515', borderColor: '#FF6B35' },
+  sortBtnText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
+  sortBtnTextActive: { color: '#FF6B35', fontWeight: '600' },
+  filterBtn: {
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  filterBtnActive: { backgroundColor: '#34C75915', borderColor: '#34C759' },
+  filterBtnText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
+  filterBtnTextActive: { color: '#34C759', fontWeight: '600' },
 
   loadingBox: { alignItems: 'center', paddingVertical: 60, gap: 16 },
   loadingText: { fontSize: 15, color: '#6D6D72', textAlign: 'center', lineHeight: 22 },

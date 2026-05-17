@@ -20,6 +20,8 @@ const T = {
     report: '報告する',
     share: '共有',
     reviewCount: (n: number) => `(${n.toLocaleString('ja-JP')}件)`,
+    visited: '行った！',
+    visitedDone: '✓ 行った',
   },
   en: {
     openNow: 'Open',
@@ -29,6 +31,8 @@ const T = {
     report: 'Report',
     share: 'Share',
     reviewCount: (n: number) => `(${n.toLocaleString('en-US')} reviews)`,
+    visited: 'Been there!',
+    visitedDone: '✓ Visited',
   },
 };
 
@@ -38,12 +42,15 @@ type Props = {
   onToggleFavorite: () => void;
   onBlock?: () => void;
   onReport?: () => void;
+  onMarkVisited?: () => void;
+  isVisited?: boolean;
   accentColor?: string;
   lang?: 'ja' | 'en';
 };
 
 export default function PlaceCard({
-  item, isFavorited, onToggleFavorite, onBlock, onReport, accentColor = '#FF6B35', lang = 'ja',
+  item, isFavorited, onToggleFavorite, onBlock, onReport, onMarkVisited, isVisited = false,
+  accentColor = '#FF6B35', lang = 'ja',
 }: Props) {
   const t = T[lang];
   const photos = (item.photoUrls ?? []).length > 0
@@ -202,6 +209,17 @@ export default function PlaceCard({
               <Text style={s.mapBtnText}>ホットペッパー</Text>
             </TouchableOpacity>
           ) : null}
+          {onMarkVisited ? (
+            <TouchableOpacity
+              onPress={isVisited ? undefined : onMarkVisited}
+              style={[s.visitedBtn, isVisited && s.visitedBtnDone]}
+              activeOpacity={0.75}
+            >
+              <Text style={[s.visitedBtnText, isVisited && s.visitedBtnTextDone]}>
+                {isVisited ? t.visitedDone : t.visited}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Share / Block / Report */}
@@ -305,6 +323,14 @@ const s = StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   mapBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  visitedBtn: {
+    paddingHorizontal: 14, paddingVertical: 0, height: 44, borderRadius: 10,
+    backgroundColor: '#F2F2F7', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  visitedBtnDone: { backgroundColor: '#34C75915', borderColor: '#34C759' },
+  visitedBtnText: { fontSize: 14, fontWeight: '600', color: '#3C3C43' },
+  visitedBtnTextDone: { color: '#34C759' },
 
   footRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
   footBtnShare: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },

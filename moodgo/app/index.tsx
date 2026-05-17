@@ -268,6 +268,45 @@ export default function Home() {
 
     if (!isRefinement) setStep(11);
 
+    if (selectedMood === '時間潰したい') {
+      setIsLoadingRecommendations(true);
+      try {
+        const res = await apiFetch('/api/random-spots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lat: originLat, lng: originLng,
+            radiusKm: 5, limit: 10,
+            companion: selectedCompanion, budget, freeWord,
+          }),
+        });
+        const d = await res.json();
+        const spots = d.data ?? d.spots ?? [];
+        const recs: Recommendation[] = spots.map((p: PlaceResponse) => ({
+          title: p.name, address: p.address, mapUrl: p.googleMapsUrl,
+          rating: p.rating, userRatingCount: p.reviewCount,
+          photoUrl: p.imageUrl || undefined, photoUrls: p.photoUrls ?? [],
+          openNow: p.openNow ?? undefined, features: [p.description].filter(Boolean) as string[],
+          source: p.source, hotpepperUrl: p.hotpepperUrl,
+        }));
+        if (recs.length > 0) {
+          setApiRecommendations(recs);
+          const newItem: HistoryItem = {
+            id: Date.now().toString(), mood: selectedMood, area: selectedArea,
+            companion: selectedCompanion, transport: selectedTransports,
+            budget: budget ?? 0, time: selectedTime,
+            atmosphere: selectedAtmosphere, priority: selectedPriority, freeWord,
+            topRecommendation: recs[0]?.title ?? '',
+            createdAt: new Date().toISOString(), recommendations: recs, savedAnswers: {},
+          };
+          setHistory((prev) => [newItem, ...prev].slice(0, 30));
+        }
+      } catch {}
+      setIsLoadingRecommendations(false);
+      if (loadingTimer.current) clearInterval(loadingTimer.current);
+      return;
+    }
+
     if (isNatureMode && natureSubGenre) {
       setIsLoadingNature(true);
       try {
