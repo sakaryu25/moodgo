@@ -44,8 +44,37 @@ type FeaturedPage = {
   is_published: boolean;
 };
 
+const T = {
+  ja: {
+    headerTitle: '特集',
+    notFound: 'ページが見つかりませんでした',
+    backToList: '← 特集一覧に戻る',
+    by: 'by',
+    features: '特徴',
+    recommended: 'おすすめ',
+    access: 'アクセス・情報',
+    viewMap: 'Googleマップで見る',
+    viewSite: '公式サイトを見る',
+    viewInsta: 'Instagramを見る',
+  },
+  en: {
+    headerTitle: 'Featured',
+    notFound: 'Page not found',
+    backToList: '← Back to featured',
+    by: 'by',
+    features: 'Features',
+    recommended: 'Recommended',
+    access: 'Access & Info',
+    viewMap: 'View on Google Maps',
+    viewSite: 'Visit official site',
+    viewInsta: 'View on Instagram',
+  },
+} as const;
+
 export default function FeaturePage() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, lang: langParam } = useLocalSearchParams<{ slug: string; lang?: string }>();
+  const lang: 'ja' | 'en' = langParam === 'en' ? 'en' : 'ja';
+  const t = T[lang];
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState<FeaturedPage | null>(null);
@@ -76,7 +105,7 @@ export default function FeaturePage() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>特集</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{t.headerTitle}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -87,9 +116,9 @@ export default function FeaturePage() {
       ) : notFound ? (
         <View style={s.center}>
           <Text style={s.notFoundEmoji}>🔍</Text>
-          <Text style={s.notFoundText}>ページが見つかりませんでした</Text>
+          <Text style={s.notFoundText}>{t.notFound}</Text>
           <TouchableOpacity onPress={() => router.back()} style={s.backLink}>
-            <Text style={s.backLinkText}>← 特集一覧に戻る</Text>
+            <Text style={s.backLinkText}>{t.backToList}</Text>
           </TouchableOpacity>
         </View>
       ) : page ? (
@@ -133,12 +162,11 @@ export default function FeaturePage() {
           {/* Header */}
           <View style={s.section}>
             {page.partner_name && (
-              <Text style={s.partnerName}>by {page.partner_name}</Text>
+              <Text style={s.partnerName}>{t.by} {page.partner_name}</Text>
             )}
             <Text style={s.spotName}>{page.spot_name}</Text>
             {page.catch_copy && <Text style={s.catchCopy}>{page.catch_copy}</Text>}
 
-            {/* Tags */}
             <View style={s.tags}>
               {page.tags.map((tag, i) => (
                 <View key={i} style={s.tag}>
@@ -147,7 +175,6 @@ export default function FeaturePage() {
               ))}
             </View>
 
-            {/* Description */}
             {page.description && (
               <Text style={s.description}>{page.description}</Text>
             )}
@@ -156,7 +183,7 @@ export default function FeaturePage() {
           {/* Features */}
           {page.features.length > 0 && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>特徴</Text>
+              <Text style={s.sectionTitle}>{t.features}</Text>
               {page.features.map((f, i) => (
                 <View key={i} style={s.featureRow}>
                   <Text style={s.featureDot}>✓</Text>
@@ -169,7 +196,7 @@ export default function FeaturePage() {
           {/* Recommended items */}
           {page.recommended_items.length > 0 && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>おすすめ</Text>
+              <Text style={s.sectionTitle}>{t.recommended}</Text>
               {page.recommended_items.map((item, i) => (
                 <View key={i} style={s.recItem}>
                   {item.image_url && (
@@ -187,7 +214,7 @@ export default function FeaturePage() {
 
           {/* Info */}
           <View style={s.section}>
-            <Text style={s.sectionTitle}>アクセス・情報</Text>
+            <Text style={s.sectionTitle}>{t.access}</Text>
             {page.address && <Text style={s.infoText}>📍 {page.address}</Text>}
             {page.access && <Text style={s.infoText}>🚉 {page.access}</Text>}
             {page.business_hours && <Text style={s.infoText}>🕒 {page.business_hours}</Text>}
@@ -197,21 +224,29 @@ export default function FeaturePage() {
 
           {/* Links */}
           {(page.website || page.instagram || page.address) && (
-            <View style={s.section}>
+            <View style={[s.section, { gap: 10 }]}>
               {page.address && (
                 <TouchableOpacity
                   onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(page.address!)}`)}
                   style={s.mapBtn}
                 >
-                  <Text style={s.mapBtnText}>Googleマップで見る</Text>
+                  <Text style={s.mapBtnText}>{t.viewMap}</Text>
                 </TouchableOpacity>
               )}
               {page.website && (
                 <TouchableOpacity
                   onPress={() => Linking.openURL(page.website!)}
-                  style={[s.mapBtn, { backgroundColor: '#4a3034', marginTop: 10 }]}
+                  style={[s.mapBtn, { backgroundColor: '#4a3034' }]}
                 >
-                  <Text style={s.mapBtnText}>公式サイトを見る</Text>
+                  <Text style={s.mapBtnText}>{t.viewSite}</Text>
+                </TouchableOpacity>
+              )}
+              {page.instagram && (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(page.instagram!)}
+                  style={[s.mapBtn, { backgroundColor: '#C13584' }]}
+                >
+                  <Text style={s.mapBtnText}>{t.viewInsta}</Text>
                 </TouchableOpacity>
               )}
             </View>
