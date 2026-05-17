@@ -649,6 +649,32 @@ export default function Home() {
           setReportDone(true);
           setReportSubmitting(false);
         }}
+        seenPlaceTitles={history.flatMap((h) =>
+          h.recommendations?.map((r) => r.title) ?? [h.topRecommendation]
+        )}
+        onSubmitVisitedFeedback={async (title, rating) => {
+          const item: FeedbackItem = {
+            id: Date.now().toString(),
+            answers: { mood: selectedMood, area: selectedArea, companion: selectedCompanion, atmosphere: selectedAtmosphere },
+            topRecommendations: [title],
+            rating, visitedPlace: title,
+            createdAt: new Date().toISOString(),
+          };
+          setPastFeedback((prev) => [item, ...prev].slice(0, 50));
+          try {
+            await apiFetch('/api/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mood: selectedMood, area: selectedArea,
+                age: profileAge, gender: profileGender,
+                companion: selectedCompanion, atmosphere: selectedAtmosphere,
+                topRecommendations: [title],
+                rating, visitedPlace: title,
+              }),
+            });
+          } catch {}
+        }}
       />
       </SlideUp>
     );

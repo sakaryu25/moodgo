@@ -64,6 +64,7 @@ export default function HistoryView({
             item={rec}
             isFavorited={isFav(rec.title)}
             onToggleFavorite={() => onToggleFavorite(rec)}
+            lang={lang}
           />
         ))}
       </ScrollView>

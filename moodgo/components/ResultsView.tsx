@@ -63,8 +63,13 @@ const T = {
     sortRating: '評価順',
     sortNear: '近い順',
     filterOpenNow: '営業中のみ',
+    filterUnseen: '未見のみ',
     visited: '行った！',
     visitedDone: '✓ 行った',
+    visitModalTitle: 'どうでしたか？',
+    visitModalSub: '実際に訪れた感想を教えてください',
+    visitModalSubmit: '送る',
+    visitModalSkip: 'スキップ',
   },
   en: {
     back: 'Back',
@@ -91,8 +96,13 @@ const T = {
     sortRating: 'Rating',
     sortNear: 'Nearest',
     filterOpenNow: 'Open now',
+    filterUnseen: 'New only',
     visited: 'Been there!',
     visitedDone: '✓ Visited',
+    visitModalTitle: 'How was it?',
+    visitModalSub: 'Share your experience',
+    visitModalSubmit: 'Send',
+    visitModalSkip: 'Skip',
   },
 } as const;
 
@@ -140,6 +150,8 @@ type Props = {
   reportSubmitting: boolean;
   reportDone: boolean;
   onSubmitReport: () => void;
+  onSubmitVisitedFeedback?: (title: string, rating: number) => void;
+  seenPlaceTitles?: string[];
   lang?: 'ja' | 'en';
 };
 
@@ -156,13 +168,17 @@ export default function ResultsView(props: Props) {
     onReset, onSetReportingSpot, reportingSpot,
     reportReason, onSetReportReason, reportNote, onSetReportNote,
     reportSubmitting, reportDone, onSubmitReport,
+    onSubmitVisitedFeedback, seenPlaceTitles = [],
     lang = 'ja',
   } = props;
   const t = T[lang];
 
   const [resultSort, setResultSort] = React.useState<'default' | 'rating' | 'near'>('default');
   const [openNowOnly, setOpenNowOnly] = React.useState(false);
+  const [unseenOnly, setUnseenOnly] = React.useState(false);
   const [visitedTitles, setVisitedTitles] = React.useState<string[]>([]);
+  const [visitingSpot, setVisitingSpot] = React.useState<Recommendation | null>(null);
+  const [visitingRating, setVisitingRating] = React.useState(0);
 
   const insets = useSafeAreaInsets();
   const isFav = (title: string) => favorites.some((f) => f.title === title);
@@ -202,6 +218,7 @@ export default function ResultsView(props: Props) {
     : recommendations.filter((r) => !blockedPlaces.includes(r.title));
 
   if (openNowOnly) facilityItems = facilityItems.filter((i) => i.openNow === true);
+  if (unseenOnly) facilityItems = facilityItems.filter((i) => !seenPlaceTitles.includes(i.title));
   if (resultSort === 'rating') facilityItems = [...facilityItems].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
   else if (resultSort === 'near') facilityItems = [...facilityItems].sort((a, b) => parseDistanceM(a.distanceText) - parseDistanceM(b.distanceText));
 
@@ -249,13 +266,24 @@ export default function ResultsView(props: Props) {
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity
-              onPress={() => setOpenNowOnly((v) => !v)}
-              style={[s.filterBtn, openNowOnly && s.filterBtnActive]}
-              activeOpacity={0.7}
-            >
-              <Text style={[s.filterBtnText, openNowOnly && s.filterBtnTextActive]}>{t.filterOpenNow}</Text>
-            </TouchableOpacity>
+            <View style={s.filterGroup}>
+              <TouchableOpacity
+                onPress={() => setOpenNowOnly((v) => !v)}
+                style={[s.filterBtn, openNowOnly && s.filterBtnActive]}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.filterBtnText, openNowOnly && s.filterBtnTextActive]}>{t.filterOpenNow}</Text>
+              </TouchableOpacity>
+              {seenPlaceTitles.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setUnseenOnly((v) => !v)}
+                  style={[s.filterBtn, unseenOnly && s.filterBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.filterBtnText, unseenOnly && s.filterBtnTextActive]}>{t.filterUnseen}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
 
@@ -283,9 +311,7 @@ export default function ResultsView(props: Props) {
             onToggleFavorite={() => onToggleFavorite(item)}
             onBlock={() => onBlockPlace(item.title)}
             onReport={() => onSetReportingSpot({ title: item.title, address: item.address ?? '' })}
-            onMarkVisited={() => setVisitedTitles((prev) =>
-              prev.includes(item.title) ? prev : [...prev, item.title]
-            )}
+            onMarkVisited={() => { setVisitingSpot(item); setVisitingRating(0); }}
             isVisited={visitedTitles.includes(item.title)}
             accentColor={accentColor}
             lang={lang}
@@ -351,6 +377,45 @@ export default function ResultsView(props: Props) {
           <Text style={s.resetBtnText}>{t.reset}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Visit feedback modal */}
+      {visitingSpot && (
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>{t.visitModalTitle}</Text>
+            <Text style={s.modalSpotName}>{visitingSpot.title}</Text>
+            <Text style={s.visitModalSub}>{t.visitModalSub}</Text>
+            <View style={s.stars}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <TouchableOpacity key={n} onPress={() => setVisitingRating(n)} style={s.starBtn}>
+                  <Text style={[s.starText, visitingRating >= n && s.starActive]}>
+                    {visitingRating >= n ? '★' : '☆'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={s.modalBtns}>
+              <TouchableOpacity
+                onPress={() => { setVisitingSpot(null); setVisitingRating(0); }}
+                style={s.modalCancelBtn}
+              >
+                <Text style={s.modalCancelText}>{t.visitModalSkip}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setVisitedTitles((prev) => [...prev, visitingSpot.title]);
+                  if (visitingRating > 0) onSubmitVisitedFeedback?.(visitingSpot.title, visitingRating);
+                  setVisitingSpot(null);
+                  setVisitingRating(0);
+                }}
+                style={[s.modalSubmitBtn, { backgroundColor: '#34C759' }]}
+              >
+                <Text style={s.modalSubmitText}>{t.visitModalSubmit}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Report modal */}
       {reportingSpot && (
@@ -456,6 +521,7 @@ const s = StyleSheet.create({
   sortBtnActive: { backgroundColor: '#FF6B3515', borderColor: '#FF6B35' },
   sortBtnText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
   sortBtnTextActive: { color: '#FF6B35', fontWeight: '600' },
+  filterGroup: { flexDirection: 'row', gap: 6 },
   filterBtn: {
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
     backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA',
@@ -463,6 +529,7 @@ const s = StyleSheet.create({
   filterBtnActive: { backgroundColor: '#34C75915', borderColor: '#34C759' },
   filterBtnText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
   filterBtnTextActive: { color: '#34C759', fontWeight: '600' },
+  visitModalSub: { fontSize: 13, color: '#8E8E93', marginBottom: 16, textAlign: 'center' },
 
   loadingBox: { alignItems: 'center', paddingVertical: 60, gap: 16 },
   loadingText: { fontSize: 15, color: '#6D6D72', textAlign: 'center', lineHeight: 22 },

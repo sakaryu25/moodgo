@@ -188,6 +188,11 @@ const OPTION_ICONS: Record<string, LucideIcon> = {
   'コスパ': Coins, '映え': Camera, '距離': MapPin, '快適さ': Sofa, '楽しさ': Smile, '質の高さ': Star,
   // nature distance
   '近場': MapPin, 'ほどほど': Footprints, '遠く': Plane,
+  // food distance
+  '近場🚶（歩きでも行ける）': Footprints,
+  '少し🚃（駅1〜2つ）': TrainFront,
+  'ほどほど🚇（電車30分ほど）': Clock,
+  '遠くてもOK🚗（県外も可）': Car,
 };
 
 const COMPANIONS = ['一人', '友達', '恋人', '家族', '大人数グループ', '先輩'];
@@ -212,6 +217,19 @@ const NATURE_SUBGENRES = [
 ];
 
 const NATURE_DISTANCES: NatureDistancePref[] = ['近場', 'ほどほど', '遠く'];
+
+const FOOD_DISTANCE_OPTIONS = [
+  '近場🚶（歩きでも行ける）',
+  '少し🚃（駅1〜2つ）',
+  'ほどほど🚇（電車30分ほど）',
+  '遠くてもOK🚗（県外も可）',
+];
+const FOOD_DISTANCE_EN = [
+  'Nearby 🚶 (walking distance)',
+  'Short trip 🚃 (1-2 stations)',
+  'Moderate 🚇 (~30 min by train)',
+  'Far is fine 🚗 (another city)',
+];
 
 const CAFE_SUBCATEGORIES = [
   { key: 'book_relax' as CafeSubCategory, label: 'ブックカフェ・隠れ家', Icon: BookOpen },
@@ -297,6 +315,7 @@ const T = {
     atmTitle: '雰囲気は？', atmSub: '今日の気分に合う空気感を選んでください。',
     priorTitle: '優先したいのは？', priorSub: 'いちばん大事にしたいポイントを選んでください。',
     foodSubSub: 'もう少し絞り込みましょう。',
+    foodDistTitle: '距離感は？', foodDistSub: 'どのくらいの距離のお店が良いですか？',
     reviewMood: '気分', reviewArea: 'エリア', reviewWith: '同伴', reviewTransport: '交通',
     reviewBudget: '予算', reviewTime: '時間', reviewAtm: '雰囲気', reviewPriority: '優先', reviewMemo: 'メモ',
     driveDetail: 'ドライブの詳細を教えてください',
@@ -328,6 +347,7 @@ const T = {
     atmTitle: 'What vibe are you after?', atmSub: 'Pick the atmosphere that fits your mood.',
     priorTitle: 'What matters most?', priorSub: 'Pick your top priority.',
     foodSubSub: "Let's narrow it down a bit.",
+    foodDistTitle: 'How far?', foodDistSub: 'How far are you willing to travel?',
     reviewMood: 'Mood', reviewArea: 'Area', reviewWith: 'With', reviewTransport: 'Transport',
     reviewBudget: 'Budget', reviewTime: 'Time', reviewAtm: 'Vibe', reviewPriority: 'Priority', reviewMemo: 'Notes',
     driveDetail: 'Tell us about your drive',
@@ -781,6 +801,33 @@ export default function QuizFlow(props: Props) {
 
     // Step 6: Time + dynamic questions (for moods that have them)
     if (step === 6) {
+      // For お腹すいた: show food distance instead of time
+      if (isHaraMode) {
+        const distOpts = lang === 'en' ? FOOD_DISTANCE_EN : FOOD_DISTANCE_OPTIONS;
+        const currentDist = dynamicAnswers['food_distance'] ?? '';
+        const displayDist = lang === 'en'
+          ? FOOD_DISTANCE_EN[FOOD_DISTANCE_OPTIONS.indexOf(currentDist)] ?? currentDist
+          : currentDist;
+        return (
+          <>
+            <Text style={s.stepTitle}>{t.foodDistTitle}</Text>
+            <Text style={s.stepSub}>{t.foodDistSub}</Text>
+            {renderOptions(distOpts, displayDist, (v) => {
+              const idx = distOpts.indexOf(v);
+              onSetDynamicAnswers({ ...dynamicAnswers, food_distance: idx >= 0 ? FOOD_DISTANCE_OPTIONS[idx] : v });
+            }, 2)}
+            {dynamicQuestions.map((dq) => (
+              <View key={dq.key} style={{ marginTop: 24 }}>
+                <Text style={s.dynQuestion}>{dq.question}</Text>
+                {renderOptions(dq.options, dynamicAnswers[dq.key] ?? '', (v) =>
+                  onSetDynamicAnswers({ ...dynamicAnswers, [dq.key]: v })
+                )}
+              </View>
+            ))}
+          </>
+        );
+      }
+
       const moodDqs = dynamicQuestions.filter((dq) =>
         selectedMood === 'ドライブしたい' ? dq.key !== 'drive_distance' : true
       );
