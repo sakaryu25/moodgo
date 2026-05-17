@@ -1,0 +1,981 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import Slider from '@react-native-community/slider';
+import {
+  Activity,
+  Beer,
+  ChevronLeft,
+  BicepsFlexed,
+  Bike,
+  BookOpen,
+  Bus,
+  Camera,
+  Car,
+  ChefHat,
+  Clock,
+  Coffee,
+  Compass,
+  Coins,
+  Droplets,
+  Dumbbell,
+  EggFried,
+  Eye,
+  FerrisWheel,
+  Fish,
+  Flame,
+  Footprints,
+  Globe,
+  Heart,
+  Home,
+  Hourglass,
+  Infinity,
+  Landmark,
+  Laptop,
+  Layers,
+  Leaf,
+  Map,
+  MapPin,
+  Mic,
+  Moon,
+  Mountain,
+  Music,
+  PawPrint,
+  Pencil,
+  Plane,
+  Shuffle,
+  Smile,
+  Sofa,
+  Soup,
+  Sparkles,
+  Star,
+  Sun,
+  Sunset,
+  Thermometer,
+  Timer,
+  TrainFront,
+  TreePine,
+  Trees,
+  Trophy,
+  User,
+  UserCheck,
+  Users,
+  UsersRound,
+  Utensils,
+  UtensilsCrossed,
+  Volume1,
+  Volume2,
+  VolumeX,
+  Waves,
+  Wheat,
+  Wifi,
+  Zap,
+} from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { OnsenCategory } from '@/types/onsen';
+import type { NatureSubGenre, NatureDistancePref } from '@/types/nature';
+import type { CafeSubCategory, CafeDetail, CafeDistancePref } from '@/types/cafe';
+import type { WaiWaiSubCategory } from '@/types/waiwai';
+import type { DynamicQuestion } from '@/types/app';
+
+// ─── Quiz data ───────────────────────────────────────────────────────────────
+
+const MOODS = [
+  { key: 'お腹すいた', label: 'お腹すいた', Icon: UtensilsCrossed, sub: '絶品グルメ' },
+  { key: 'まったりしたい', label: 'まったりしたい', Icon: Coffee, sub: '癒やし・リラックス' },
+  { key: 'わいわい楽しみたい', label: 'わいわい楽しみたい', Icon: Sparkles, sub: 'エンタメ・遊び' },
+  { key: '自然感じたい', label: '自然感じたい', Icon: Leaf, sub: '自然・絶景・アウトドア' },
+  { key: 'ドライブしたい', label: 'ドライブしたい', Icon: Car, sub: 'ドライブ・ツーリング' },
+  { key: '集中したい', label: '集中したい', Icon: BookOpen, sub: '作業・勉強' },
+  { key: '体を動かしたい', label: '体を動かしたい', Icon: Activity, sub: 'スポーツ・アウトドア' },
+  { key: '遠くに行きたい', label: '遠くに行きたい', Icon: Plane, sub: '小旅行・お出かけ' },
+];
+
+const MOOD_QUESTIONS: Record<string, DynamicQuestion[]> = {
+  'お腹すいた': [
+    { key: 'food_genre_new', question: '食べたいジャンルは？', options: [
+      '居酒屋🍺', '和食🍣', '洋食🍳', 'イタリアン🍝',
+      '中華🥟', '焼肉🥩', '韓国🌶️', 'アジア系統🍛',
+      '各国料理🌍', 'ラーメン🍜', 'お好み焼き・もんじゃ🥞', 'カフェ・スイーツ☕',
+    ]},
+  ],
+  'まったりしたい': [
+    { key: 'relax_place', question: 'どこで癒やされたい？', options: ['自然の中🌿', 'カフェ☕', '温泉・スパ♨️', '絶景スポット🌅'] },
+  ],
+  'わいわい楽しみたい': [],
+  'ドライブしたい': [
+    { key: 'drive_distance', question: 'どのくらい遠出したい？', options: ['30分（サクッと）', '1時間（ほどよく）', '2時間（ガッツリ）', '3時間〜（旅）'] },
+    { key: 'drive_vibe', question: '雰囲気は？', options: ['絶景🌅', '休憩☕', '遊べる🎡', '穴場🗺️'] },
+    { key: 'drive_road', question: '走りたい道は？', options: ['海沿い🌊', '山⛰️', '都会🌃'] },
+  ],
+  '自然感じたい': [
+    { key: 'nature_view', question: 'どの自然の景色を見たい？', options: ['海・川・湖🌊', '山・森🌲'] },
+    { key: 'nature_how', question: '自然の中でどのように過ごしたい？', options: ['景色を眺める👀', 'カフェでまったり☕', '自然の中を散歩🚶'] },
+    { key: 'nature_scale', question: 'どのくらいの規模の自然？', options: ['近場の公園🌳', '整備された綺麗な公園🌸', '広大な自然や絶景🏔'] },
+  ],
+  '集中したい': [
+    { key: 'focus_task', question: '何をする？', options: ['勉強・受験📖', 'PC作業・リモートワーク💻', '読書📚', '創作・趣味✏️'] },
+    { key: 'focus_needs', question: '必須の設備は？', options: ['wifi・電源🔌', '静かな机🪑', '飲み物☕'] },
+    { key: 'focus_noise', question: '雑音の許容度は？', options: ['無音に近い方が良い🔇', '適度なざわつき🔉', '多少賑やかでも大丈夫🔊', 'BGM程なら🎵'] },
+  ],
+  '体を動かしたい': [
+    { key: 'sports_intensity', question: '運動の強度は？', options: ['ガッツリ汗をかきたい💪', 'ほどよく動きたい🏃', '軽く散歩程度🚶', '外に出るだけでOK🌞'] },
+    { key: 'sports_type', question: 'どんな運動？', options: ['スポーツ・競技🏀', 'ランニング・ウォーキング🏃', 'アウトドア・ハイキング🏔', '水泳・プール🏊'] },
+    { key: 'sports_place', question: '場所は？', options: ['室内施設・ジム🏋️', '広い公園・グラウンド⚽', '山・自然の中🌲', '海・川・湖🌊'] },
+  ],
+  '遠くに行きたい': [
+    { key: 'travel_time', question: 'どのくらい時間がある？', options: ['午前中のみ⏰', '夕方まで🌆', '日跨ぐ前まで🌙', '日越してもOK🌟'] },
+    { key: 'travel_place', question: '行きたい場所のイメージは？', options: ['自然・山・海🌊', '観光地・名所⛩️', '温泉・リゾート♨️', '都市・異文化🌆'] },
+    { key: 'travel_goal', question: '旅の目的は？', options: ['非日常を味わいたい✨', '絶景を見たい🌅', '楽しみたい🎉', 'ゆっくり過ごしたい😴'] },
+  ],
+};
+
+// ─── Icon map & emoji stripper ────────────────────────────────────────────────
+
+const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2190}-\u{27FF}\u{FE00}-\u{FE0F}♨🔌🪑]/gu;
+const stripEmoji = (s: string) => s.replace(EMOJI_RE, '').trim();
+
+type LucideIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
+const OPTION_ICONS: Record<string, LucideIcon> = {
+  // food genres
+  '居酒屋🍺': Beer, '和食🍣': Fish, '洋食🍳': EggFried, 'イタリアン🍝': UtensilsCrossed,
+  '中華🥟': ChefHat, '焼肉🥩': Flame, '韓国🌶️': Zap, 'アジア系統🍛': Compass,
+  '各国料理🌍': Globe, 'ラーメン🍜': Soup, 'お好み焼き・もんじゃ🥞': Wheat, 'カフェ・スイーツ☕': Coffee,
+  // relax place
+  '自然の中🌿': Leaf, 'カフェ☕': Coffee, '温泉・スパ♨️': Waves, '絶景スポット🌅': Sunset,
+  // drive
+  '30分（サクッと）': Timer, '1時間（ほどよく）': Clock, '2時間（ガッツリ）': Hourglass, '3時間〜（旅）': Infinity,
+  '絶景🌅': Sunset, '休憩☕': Coffee, '遊べる🎡': FerrisWheel, '穴場🗺️': Map,
+  '海沿い🌊': Waves, '山⛰️': Mountain, '都会🌃': Layers,
+  // nature
+  '海・川・湖🌊': Waves, '山・森🌲': TreePine,
+  '景色を眺める👀': Eye, 'カフェでまったり☕': Coffee, '自然の中を散歩🚶': Footprints,
+  '近場の公園🌳': MapPin, '整備された綺麗な公園🌸': Trees, '広大な自然や絶景🏔': Mountain,
+  // focus
+  '勉強・受験📖': BookOpen, 'PC作業・リモートワーク💻': Laptop, '読書📚': BookOpen, '創作・趣味✏️': Pencil,
+  'wifi・電源🔌': Wifi, '静かな机🪑': Sofa, '飲み物☕': Coffee,
+  '無音に近い方が良い🔇': VolumeX, '適度なざわつき🔉': Volume1, '多少賑やかでも大丈夫🔊': Volume2, 'BGM程なら🎵': Music,
+  // sports
+  'ガッツリ汗をかきたい💪': BicepsFlexed, 'ほどよく動きたい🏃': Activity, '軽く散歩程度🚶': Footprints, '外に出るだけでOK🌞': Sun,
+  'スポーツ・競技🏀': Trophy, 'ランニング・ウォーキング🏃': Activity, 'アウトドア・ハイキング🏔': Mountain, '水泳・プール🏊': Waves,
+  '室内施設・ジム🏋️': Dumbbell, '広い公園・グラウンド⚽': Trees, '山・自然の中🌲': TreePine,
+  // travel
+  '午前中のみ⏰': Timer, '夕方まで🌆': Sunset, '日跨ぐ前まで🌙': Moon, '日越してもOK🌟': Star,
+  '自然・山・海🌊': Waves, '観光地・名所⛩️': Landmark, '温泉・リゾート♨️': Waves, '都市・異文化🌆': Layers,
+  '非日常を味わいたい✨': Sparkles, '絶景を見たい🌅': Camera, '楽しみたい🎉': Smile, 'ゆっくり過ごしたい😴': Moon,
+  // companions
+  '一人': User, '友達': Users, '恋人': Heart, '家族': Home, '大人数グループ': UsersRound, '先輩': UserCheck,
+  // transport
+  '徒歩': Footprints, '自転車・バイク': Bike, '電車': TrainFront, '車': Car, 'バス': Bus, 'なんでも': Shuffle,
+  // time
+  '15〜30分': Timer, '30〜60分': Clock, '1〜2時間': Hourglass, '2〜4時間': Hourglass, '4〜6時間': Sunset, '6時間以上': Moon,
+  // atmosphere
+  '静か': VolumeX, '賑やか': Music, 'アクティブ': Activity, 'スリル': Zap, 'ロマンティック': Heart, 'アットホーム': Home,
+  // priority
+  'コスパ': Coins, '映え': Camera, '距離': MapPin, '快適さ': Sofa, '楽しさ': Smile, '質の高さ': Star,
+  // nature distance
+  '近場': MapPin, 'ほどほど': Footprints, '遠く': Plane,
+};
+
+const COMPANIONS = ['一人', '友達', '恋人', '家族', '大人数グループ', '先輩'];
+const TRANSPORT_OPTIONS = ['徒歩', '自転車・バイク', '電車', '車', 'バス', 'なんでも'];
+const TIME_OPTIONS = ['15〜30分', '30〜60分', '1〜2時間', '2〜4時間', '4〜6時間', '6時間以上'];
+const ATMOSPHERE_OPTIONS = ['静か', '賑やか', 'アクティブ', 'スリル', 'ロマンティック', 'アットホーム'];
+const PRIORITY_OPTIONS = ['コスパ', '映え', '距離', '快適さ', '楽しさ', '質の高さ'];
+
+const ONSEN_CATEGORIES = [
+  { key: 'natural_onsen' as OnsenCategory, label: '天然温泉・日帰り温泉', Icon: Waves },
+  { key: 'sento' as OnsenCategory, label: '銭湯', Icon: Droplets },
+  { key: 'super_sento' as OnsenCategory, label: 'スーパー銭湯・健康ランド', Icon: Activity },
+  { key: 'sauna_ganban' as OnsenCategory, label: 'サウナ・岩盤浴', Icon: Thermometer },
+  { key: 'all_onsen' as OnsenCategory, label: '温泉施設全般（おまかせ）', Icon: Sparkles },
+];
+
+const NATURE_SUBGENRES = [
+  { key: 'sea' as NatureSubGenre, label: '波の音と海風', Icon: Waves },
+  { key: 'forest' as NatureSubGenre, label: '森の中で深呼吸', Icon: TreePine },
+  { key: 'park' as NatureSubGenre, label: '広い芝生でゴロゴロ', Icon: Sun },
+  { key: 'panorama' as NatureSubGenre, label: '圧倒的なパノラマ', Icon: Mountain },
+];
+
+const NATURE_DISTANCES: NatureDistancePref[] = ['近場', 'ほどほど', '遠く'];
+
+const CAFE_SUBCATEGORIES = [
+  { key: 'book_relax' as CafeSubCategory, label: 'ブックカフェ・隠れ家', Icon: BookOpen },
+  { key: 'animal' as CafeSubCategory, label: 'アニマルカフェ', Icon: PawPrint },
+  { key: 'view' as CafeSubCategory, label: '景色が良いカフェ', Icon: Sun },
+  { key: 'sweets' as CafeSubCategory, label: '絶品スイーツカフェ', Icon: Sparkles },
+];
+
+const WAIWAI_SUBCATEGORIES = [
+  { key: 'active' as WaiWaiSubCategory, label: '体を動かしてはしゃぎたい', Icon: Dumbbell },
+  { key: 'party' as WaiWaiSubCategory, label: '歌って飲んで騒ぎたい', Icon: Mic },
+  { key: 'experience' as WaiWaiSubCategory, label: '非日常の体験で盛り上がりたい', Icon: Sparkles },
+  { key: 'food_drink' as WaiWaiSubCategory, label: 'ご飯とお酒でワイワイ', Icon: UtensilsCrossed },
+];
+
+// ─── Props ───────────────────────────────────────────────────────────────────
+
+type Props = {
+  step: number;
+  selectedMood: string;
+  selectedArea: string;
+  locationDisplayArea: string;
+  selectedCompanion: string;
+  selectedTransports: string[];
+  budget: number | undefined;
+  budgetMin: number;
+  showUnseenOnly: boolean;
+  selectedTime: string;
+  selectedAtmosphere: string;
+  selectedPriority: string;
+  freeWord: string;
+  dynamicQuestions: DynamicQuestion[];
+  dynamicAnswers: Record<string, string>;
+  isLocating: boolean;
+  locationError: string;
+  onSelectMood: (v: string) => void;
+  onSelectArea: (v: string) => void;
+  onSelectCompanion: (v: string) => void;
+  onSelectTransports: (v: string[]) => void;
+  onSetBudget: (v: number | undefined) => void;
+  onSetBudgetMin: (v: number) => void;
+  onSetShowUnseenOnly: (v: boolean) => void;
+  onSelectTime: (v: string) => void;
+  onSelectAtmosphere: (v: string) => void;
+  onSelectPriority: (v: string) => void;
+  onSetFreeWord: (v: string) => void;
+  onSetDynamicQuestions: (v: DynamicQuestion[]) => void;
+  onSetDynamicAnswers: (v: Record<string, string>) => void;
+  onUseCurrentLocation: () => void;
+  onSetStep: (v: number) => void;
+  onBack: () => void;
+  onOpenResults: () => void;
+  onsenCategory: OnsenCategory | null;
+  onSetOnsenCategory: (v: OnsenCategory) => void;
+  natureSubGenre: NatureSubGenre | null;
+  onSetNatureSubGenre: (v: NatureSubGenre) => void;
+  natureDistancePref: NatureDistancePref | null;
+  onSetNatureDistancePref: (v: NatureDistancePref) => void;
+  cafeSubCategory: CafeSubCategory | null;
+  onSetCafeSubCategory: (v: CafeSubCategory) => void;
+  cafeDetail: CafeDetail | null;
+  onSetCafeDetail: (v: CafeDetail) => void;
+  cafeDetailMode: boolean;
+  onSetCafeDetailMode: (v: boolean) => void;
+  cafeDistancePref: CafeDistancePref | null;
+  onSetCafeDistancePref: (v: CafeDistancePref) => void;
+  waiWaiSubCategory: WaiWaiSubCategory | null;
+  onSetWaiWaiSubCategory: (v: WaiWaiSubCategory) => void;
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export default function QuizFlow(props: Props) {
+  const insets = useSafeAreaInsets();
+  const {
+    step, selectedMood, selectedArea, locationDisplayArea,
+    selectedCompanion, selectedTransports, budget, budgetMin,
+    selectedTime, selectedAtmosphere, selectedPriority, freeWord,
+    dynamicQuestions, dynamicAnswers, isLocating, locationError,
+    onSelectMood, onSelectArea, onSelectCompanion, onSelectTransports,
+    onSetBudget, onSetBudgetMin, onSelectTime, onSelectAtmosphere,
+    onSelectPriority, onSetFreeWord, onSetDynamicQuestions, onSetDynamicAnswers,
+    onUseCurrentLocation, onSetStep, onBack, onOpenResults,
+    onsenCategory, onSetOnsenCategory,
+    natureSubGenre, onSetNatureSubGenre, natureDistancePref, onSetNatureDistancePref,
+    cafeSubCategory, onSetCafeSubCategory, cafeDetail, onSetCafeDetail,
+    cafeDetailMode, onSetCafeDetailMode, cafeDistancePref, onSetCafeDistancePref,
+    waiWaiSubCategory, onSetWaiWaiSubCategory,
+  } = props;
+
+  // ─── Step animation ───────────────────────────────────────────────────
+  const stepOpacity = useRef(new Animated.Value(1)).current;
+  const stepSlide   = useRef(new Animated.Value(0)).current;
+  const prevStep    = useRef(step);
+
+  useEffect(() => {
+    const dir = step >= prevStep.current ? 1 : -1;
+    prevStep.current = step;
+    stepSlide.setValue(dir * 36);
+    stepOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(stepOpacity, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.spring(stepSlide,   { toValue: 0, tension: 200, friction: 26, useNativeDriver: true }),
+    ]).start();
+  }, [step]);
+
+  const relaxPlace = dynamicAnswers['relax_place'] ?? '';
+  const isNatureMode =
+    selectedMood === '自然感じたい' ||
+    (selectedMood === 'まったりしたい' && relaxPlace.includes('自然の中'));
+  const isOnsenMode = selectedMood === 'まったりしたい' && relaxPlace.includes('温泉');
+  const isCafeMode = selectedMood === 'まったりしたい' && relaxPlace.includes('カフェ');
+  const isWaiWaiMode = selectedMood === 'わいわい楽しみたい';
+
+  // ─── Option grid ──────────────────────────────────────────────────────
+
+  const renderOptions = (
+    options: string[],
+    selected: string,
+    onSelect: (v: string) => void,
+    cols = 2
+  ) => (
+    <View style={[s.grid, { gap: 10 }]}>
+      {options.map((opt) => {
+        const active = selected === opt;
+        const Icon = OPTION_ICONS[opt];
+        const label = stripEmoji(opt);
+        return (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => onSelect(opt)}
+            activeOpacity={0.7}
+            style={[
+              s.optBtn,
+              { width: cols === 2 ? '48%' : cols === 3 ? '31%' : '100%' },
+              active && s.optBtnActive,
+            ]}
+          >
+            {Icon && (
+              <Icon size={18} color={active ? '#CC6600' : '#9b7b82'} strokeWidth={1.8} />
+            )}
+            <Text style={[s.optText, active && s.optTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  const renderMultiOptions = (
+    options: string[],
+    selected: string[],
+    onToggle: (v: string) => void,
+    cols = 2
+  ) => (
+    <View style={[s.grid, { gap: 10 }]}>
+      {options.map((opt) => {
+        const active = selected.includes(opt);
+        const Icon = OPTION_ICONS[opt];
+        const label = stripEmoji(opt);
+        return (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => onToggle(opt)}
+            activeOpacity={0.7}
+            style={[
+              s.optBtn,
+              { width: cols === 2 ? '48%' : cols === 3 ? '31%' : '100%' },
+              active && s.optBtnActive,
+            ]}
+          >
+            {active && <Text style={s.check}>✓</Text>}
+            {Icon && (
+              <Icon size={18} color={active ? '#CC6600' : '#9b7b82'} strokeWidth={1.8} />
+            )}
+            <Text style={[s.optText, active && s.optTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // ─── Next button ──────────────────────────────────────────────────────
+
+  const renderNext = (onNext: () => void, label = '次へ', disabled = false) => (
+    <View style={[s.actionBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <TouchableOpacity onPress={disabled ? undefined : onNext} activeOpacity={0.85}>
+        <LinearGradient
+          colors={disabled ? ['#ccc', '#ccc'] : ['#ffbf67', '#ff7b54']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={s.nextBtn}
+        >
+          <Text style={s.nextText}>{label}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // ─── Step content ──────────────────────────────────────────────────────
+
+  const renderStepContent = () => {
+    // Step 1: Mood selection
+    if (step === 1) {
+      return (
+        <>
+          <Text style={s.stepTitle}>今の気分は？</Text>
+          <Text style={s.stepSub}>一番近いものを選んでください。</Text>
+          <View style={s.grid}>
+            {MOODS.map((m) => {
+              const active = selectedMood === m.key;
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  onPress={() => {
+                    onSelectMood(m.key);
+                    const pool = MOOD_QUESTIONS[m.key] ?? [];
+                    onSetDynamicQuestions(pool);
+                    onSetDynamicAnswers({});
+                  }}
+                  activeOpacity={0.7}
+                  style={[s.moodBtn, active && s.moodBtnActive]}
+                >
+                  <View style={s.moodIconWrap}>
+                    <m.Icon size={24} color={active ? '#CC6600' : '#4a3034'} strokeWidth={1.8} />
+                  </View>
+                  <Text style={[s.moodLabel, active && s.moodLabelActive]}>{m.label}</Text>
+                  <Text style={s.moodSub}>{m.sub}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      );
+    }
+
+    // Step 2: Companion
+    if (step === 2) {
+      return (
+        <>
+          <Text style={s.stepTitle}>誰と？</Text>
+          <Text style={s.stepSub}>誰と行くかでおすすめが変わります。</Text>
+          {renderOptions(COMPANIONS, selectedCompanion, onSelectCompanion, 2)}
+        </>
+      );
+    }
+
+    // Step 3: Transport (or drive distance for ドライブしたい)
+    if (step === 3) {
+      if (selectedMood === 'ドライブしたい' && dynamicQuestions[0]) {
+        const dq = dynamicQuestions[0];
+        return (
+          <>
+            <Text style={s.stepTitle}>{dq.question}</Text>
+            <Text style={s.stepSub}>ドライブの詳細を教えてください</Text>
+            {renderOptions(dq.options, dynamicAnswers[dq.key] ?? '', (v) =>
+              onSetDynamicAnswers({ ...dynamicAnswers, [dq.key]: v })
+            )}
+          </>
+        );
+      }
+      return (
+        <>
+          <Text style={s.stepTitle}>交通手段は？</Text>
+          <Text style={s.stepSub}>複数選べます。</Text>
+          {renderMultiOptions(TRANSPORT_OPTIONS, selectedTransports, (opt) => {
+            if (opt === 'なんでも') {
+              onSelectTransports(selectedTransports.includes(opt) ? [] : ['なんでも']);
+            } else {
+              const without = selectedTransports.filter((t) => t !== 'なんでも');
+              onSelectTransports(
+                selectedTransports.includes(opt)
+                  ? without.filter((t) => t !== opt)
+                  : [...without, opt]
+              );
+            }
+          }, 3)}
+        </>
+      );
+    }
+
+    // Step 4: Budget
+    if (step === 4) {
+      return (
+        <>
+          <Text style={s.stepTitle}>予算は？</Text>
+          <Text style={s.stepSub}>ざっくりで大丈夫です。</Text>
+          <View style={s.budgetBox}>
+            <Text style={s.budgetValue}>
+              {budgetMin > 0 ? `¥${budgetMin.toLocaleString('ja-JP')} 〜 ` : ''}
+              {budget === 0 ? '無料' : `¥${(budget ?? 0).toLocaleString('ja-JP')}`}
+            </Text>
+            <Slider
+              style={{ width: '100%', height: 36 }}
+              minimumValue={0} maximumValue={50000} step={500}
+              value={budget ?? 0}
+              onValueChange={(v) => onSetBudget(Math.round(v))}
+              minimumTrackTintColor="#FF9500"
+              maximumTrackTintColor="#e5e5ea"
+              thumbTintColor="#FF9500"
+            />
+            <View style={s.budgetLabels}>
+              {['¥0', '¥10,000', '¥30,000', '¥50,000'].map((l) => (
+                <Text key={l} style={s.budgetLabelText}>{l}</Text>
+              ))}
+            </View>
+          </View>
+          <View style={[s.grid, { gap: 8 }]}>
+            {[0, 1000, 3000, 5000, 10000, 30000].map((p) => (
+              <TouchableOpacity
+                key={p}
+                onPress={() => { onSetBudget(p); onSetBudgetMin(0); }}
+                style={[s.budgetChip, (budget ?? 0) === p && s.budgetChipActive]}
+              >
+                <Text style={[(budget ?? 0) === p ? s.budgetChipTextActive : s.budgetChipText]}>
+                  {p === 0 ? '無料' : `¥${p.toLocaleString('ja-JP')}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      );
+    }
+
+    // Step 5: Area / Location
+    if (step === 5) {
+      return (
+        <>
+          <Text style={s.stepTitle}>エリアは？</Text>
+          <Text style={s.stepSub}>現在地を使うか、エリア名を入力してください。</Text>
+          <TouchableOpacity
+            onPress={onUseCurrentLocation}
+            disabled={isLocating}
+            activeOpacity={0.85}
+            style={s.locationBtnWrap}
+          >
+            <LinearGradient
+              colors={isLocating ? ['#ccc', '#ccc'] : ['#ffbf67', '#ff7b54']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.locationBtn}
+            >
+              <Text style={s.locationBtnText}>
+                {isLocating ? '現在地を取得中...' : '📍 現在地を使う'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          {locationDisplayArea ? (
+            <View style={s.locatedTag}>
+              <Text style={s.locatedTagText}>📍 {locationDisplayArea}</Text>
+            </View>
+          ) : null}
+          <Text style={s.orDivider}>または</Text>
+          <TextInput
+            value={selectedArea}
+            onChangeText={onSelectArea}
+            placeholder="例：渋谷 / 横浜 / 新宿"
+            placeholderTextColor="#b07080"
+            style={s.textInput}
+          />
+          {locationError ? <Text style={s.errorText}>{locationError}</Text> : null}
+        </>
+      );
+    }
+
+    // Step 6: Time + dynamic questions (for moods that have them)
+    if (step === 6) {
+      const moodDqs = dynamicQuestions.filter((dq) =>
+        selectedMood === 'ドライブしたい' ? dq.key !== 'drive_distance' : true
+      );
+      return (
+        <>
+          <Text style={s.stepTitle}>どのくらい時間ある？</Text>
+          <Text style={s.stepSub}>空き時間に合う過ごし方を提案します。</Text>
+          {renderOptions(TIME_OPTIONS, selectedTime, onSelectTime, 2)}
+
+          {moodDqs.map((dq) => (
+            <View key={dq.key} style={{ marginTop: 24 }}>
+              <Text style={s.dynQuestion}>{dq.question}</Text>
+              {renderOptions(dq.options, dynamicAnswers[dq.key] ?? '', (v) =>
+                onSetDynamicAnswers({ ...dynamicAnswers, [dq.key]: v })
+              )}
+            </View>
+          ))}
+        </>
+      );
+    }
+
+    // Step 7: Free-form text
+    if (step === 7) {
+      return (
+        <>
+          <Text style={s.stepTitle}>自由に教えてください</Text>
+          <Text style={s.stepSub}>行きたい場所のイメージがあれば自由に。なくてもOK。</Text>
+          <TextInput
+            value={freeWord}
+            onChangeText={onSetFreeWord}
+            placeholder="例：夜景、甘いもの、公園、静かな場所、海が見たい など"
+            placeholderTextColor="#b07080"
+            multiline
+            numberOfLines={6}
+            textAlignVertical="top"
+            style={s.textarea}
+          />
+        </>
+      );
+    }
+
+    // Step 8: Mood-specific subcategory
+    if (step === 8) {
+      if (isOnsenMode) {
+        return (
+          <>
+            <Text style={s.stepTitle}>温泉の種類は？</Text>
+            <Text style={s.stepSub}>どんな温泉施設をお探しですか？</Text>
+            <View style={s.grid}>
+              {ONSEN_CATEGORIES.map((cat) => {
+                const active = onsenCategory === cat.key;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    onPress={() => onSetOnsenCategory(cat.key)}
+                    style={[s.catBtn, active && s.catBtnActive]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.catIconWrap}>
+                      <cat.Icon size={24} color={active ? '#CC6600' : '#4a3034'} strokeWidth={1.8} />
+                    </View>
+                    <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        );
+      }
+
+      if (isNatureMode) {
+        return (
+          <>
+            <Text style={s.stepTitle}>どんな自然？</Text>
+            <Text style={s.stepSub}>行きたい自然のタイプを選んでください。</Text>
+            <View style={s.grid}>
+              {NATURE_SUBGENRES.map((sg) => {
+                const active = natureSubGenre === sg.key;
+                return (
+                  <TouchableOpacity
+                    key={sg.key}
+                    onPress={() => onSetNatureSubGenre(sg.key)}
+                    style={[s.catBtn, active && s.catBtnActive]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.catIconWrap}>
+                      <sg.Icon size={24} color={active ? '#CC6600' : '#4a3034'} strokeWidth={1.8} />
+                    </View>
+                    <Text style={[s.catLabel, active && s.catLabelActive]}>{sg.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        );
+      }
+
+      if (isCafeMode) {
+        return (
+          <>
+            <Text style={s.stepTitle}>どんなカフェ？</Text>
+            <Text style={s.stepSub}>お好みのカフェタイプを選んでください。</Text>
+            <View style={s.grid}>
+              {CAFE_SUBCATEGORIES.map((cat) => {
+                const active = cafeSubCategory === cat.key;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    onPress={() => onSetCafeSubCategory(cat.key)}
+                    style={[s.catBtn, active && s.catBtnActive]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.catIconWrap}>
+                      <cat.Icon size={24} color={active ? '#CC6600' : '#4a3034'} strokeWidth={1.8} />
+                    </View>
+                    <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        );
+      }
+
+      if (isWaiWaiMode) {
+        return (
+          <>
+            <Text style={s.stepTitle}>どんな楽しみ方？</Text>
+            <Text style={s.stepSub}>盛り上がり方のスタイルを選んでください。</Text>
+            <View style={s.grid}>
+              {WAIWAI_SUBCATEGORIES.map((cat) => {
+                const active = waiWaiSubCategory === cat.key;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    onPress={() => onSetWaiWaiSubCategory(cat.key)}
+                    style={[s.catBtn, active && s.catBtnActive]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.catIconWrap}>
+                      <cat.Icon size={24} color={active ? '#CC6600' : '#4a3034'} strokeWidth={1.8} />
+                    </View>
+                    <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        );
+      }
+
+      // Default step 8: Atmosphere
+      return (
+        <>
+          <Text style={s.stepTitle}>雰囲気は？</Text>
+          <Text style={s.stepSub}>今日の気分に合う空気感を選んでください。</Text>
+          {renderOptions(ATMOSPHERE_OPTIONS, selectedAtmosphere, onSelectAtmosphere, 2)}
+        </>
+      );
+    }
+
+    // Step 9: Mood-specific detail OR atmosphere
+    if (step === 9) {
+      if (isNatureMode) {
+        return (
+          <>
+            <Text style={s.stepTitle}>どのくらい遠い？</Text>
+            <Text style={s.stepSub}>現在地からの距離感を選んでください。</Text>
+            <View style={s.grid}>
+              {NATURE_DISTANCES.map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  onPress={() => onSetNatureDistancePref(d)}
+                  style={[s.optBtn, { width: '31%' }, natureDistancePref === d && s.optBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.optText, natureDistancePref === d && s.optTextActive]}>{d}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        );
+      }
+
+      if (isCafeMode && (cafeSubCategory === 'animal' || cafeSubCategory === 'view')) {
+        const detailOptions =
+          cafeSubCategory === 'animal'
+            ? [
+                { key: 'cat' as CafeDetail, label: '猫カフェ 🐱' },
+                { key: 'dog' as CafeDetail, label: '犬カフェ 🐶' },
+                { key: 'rare' as CafeDetail, label: '小動物・珍しい動物 🦔' },
+              ]
+            : [
+                { key: 'ocean' as CafeDetail, label: '海・水辺 🌊' },
+                { key: 'forest' as CafeDetail, label: '森・緑 🌲' },
+                { key: 'city' as CafeDetail, label: '街並み・高層ビル 🏙️' },
+              ];
+        return (
+          <>
+            <Text style={s.stepTitle}>もう少し詳しく</Text>
+            <Text style={s.stepSub}>お好みのタイプを選んでください。</Text>
+            <View style={s.grid}>
+              {detailOptions.map((d) => (
+                <TouchableOpacity
+                  key={d.key}
+                  onPress={() => onSetCafeDetail(d.key)}
+                  style={[s.catBtn, cafeDetail === d.key && s.catBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.catLabel, cafeDetail === d.key && s.catLabelActive]}>{d.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        );
+      }
+
+      // Default step 9: Priority
+      return (
+        <>
+          <Text style={s.stepTitle}>優先したいのは？</Text>
+          <Text style={s.stepSub}>いちばん大事にしたいポイントを選んでください。</Text>
+          {renderOptions(PRIORITY_OPTIONS, selectedPriority, onSelectPriority, 2)}
+        </>
+      );
+    }
+
+    // Step 10: Review + Submit
+    if (step === 10) {
+      const summary = [
+        selectedMood && `気分：${selectedMood}`,
+        selectedArea && `エリア：${selectedArea}`,
+        selectedCompanion && `同伴：${selectedCompanion}`,
+        selectedTransports.length > 0 && `交通：${selectedTransports.join('・')}`,
+        budget !== undefined && `予算：¥${budget.toLocaleString('ja-JP')}`,
+        selectedTime && `時間：${selectedTime}`,
+        selectedAtmosphere && `雰囲気：${selectedAtmosphere}`,
+        selectedPriority && `優先：${selectedPriority}`,
+        freeWord && `メモ：${freeWord}`,
+      ].filter(Boolean);
+
+      return (
+        <>
+          <Text style={s.stepTitle}>確認</Text>
+          <Text style={s.stepSub}>条件を確認してください。</Text>
+          <View style={s.reviewCard}>
+            {summary.map((line, i) => (
+              <Text key={i} style={s.reviewLine}>{line as string}</Text>
+            ))}
+          </View>
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  const nextStep = () => onSetStep(step + 1);
+  const isLastStep = step === 10;
+
+  return (
+    <View style={s.root}>
+      {/* iOS nav bar */}
+      <View style={[s.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={onBack} style={s.backBtn} activeOpacity={0.6} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ChevronLeft size={20} color="#FF6B35" strokeWidth={2.5} />
+          <Text style={s.backText}>戻る</Text>
+        </TouchableOpacity>
+        <View style={s.progressWrap}>
+          <View style={[s.progressBar, { width: `${(step / 10) * 100}%` as any }]} />
+        </View>
+        <Text style={s.stepCount}>{step}/10</Text>
+      </View>
+
+      {/* Content */}
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 120 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={{ opacity: stepOpacity, transform: [{ translateX: stepSlide }] }}>
+          {renderStepContent()}
+        </Animated.View>
+      </ScrollView>
+
+      {/* Next button */}
+      {isLastStep
+        ? renderNext(onOpenResults, 'おすすめを見る')
+        : renderNext(nextStep, step === 1 && !selectedMood ? 'スキップ' : '次へ')}
+    </View>
+  );
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F2F2F7' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingBottom: 10,
+    backgroundColor: '#fff', gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.12)',
+  },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 6, paddingVertical: 8, minWidth: 64 },
+  backText: { fontSize: 17, color: '#FF6B35', fontWeight: '400' },
+  progressWrap: {
+    flex: 1, height: 3, backgroundColor: '#E5E5EA', borderRadius: 2, overflow: 'hidden',
+  },
+  progressBar: { height: '100%', backgroundColor: '#FF6B35', borderRadius: 2 },
+  stepCount: { fontSize: 13, fontWeight: '500', color: '#8E8E93', minWidth: 36, textAlign: 'right', paddingRight: 8 },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 20 },
+  stepTitle: { fontSize: 30, fontWeight: '700', color: '#000', marginBottom: 4, letterSpacing: -0.5 },
+  stepSub: { fontSize: 14, color: '#8E8E93', marginBottom: 20, lineHeight: 22 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  optBtn: {
+    paddingVertical: 11, paddingHorizontal: 14, borderRadius: 10,
+    backgroundColor: '#fff', borderWidth: StyleSheet.hairlineWidth, borderColor: '#C6C6C8',
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  optBtnActive: {
+    backgroundColor: '#FF6B3515', borderColor: '#FF6B35', borderWidth: 1.5,
+  },
+  optText: { fontSize: 14, fontWeight: '500', color: '#000', textAlign: 'center' },
+  optTextActive: { color: '#FF6B35', fontWeight: '600' },
+  check: { position: 'absolute', top: 5, right: 7, fontSize: 10, fontWeight: '700', color: '#FF6B35' },
+  moodBtn: {
+    width: '48%', paddingVertical: 16, paddingHorizontal: 14, borderRadius: 14,
+    backgroundColor: '#fff', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E5EA',
+    alignItems: 'flex-start', gap: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
+    elevation: 2,
+  },
+  moodBtnActive: {
+    backgroundColor: '#FF6B3512', borderColor: '#FF6B35', borderWidth: 1.5,
+  },
+  moodIconWrap: { marginBottom: 4 },
+  moodLabel: { fontSize: 14, fontWeight: '600', color: '#000' },
+  moodLabelActive: { color: '#FF6B35' },
+  moodSub: { fontSize: 11, color: '#8E8E93', fontWeight: '400' },
+  actionBar: {
+    padding: 16, paddingBottom: 16, backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.12)',
+  },
+  nextBtn: {
+    height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+  },
+  nextText: { fontSize: 17, fontWeight: '600', color: '#fff' },
+  budgetBox: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 20, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
+  },
+  budgetValue: { fontSize: 34, fontWeight: '700', color: '#000', textAlign: 'center', marginBottom: 8 },
+  budgetLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  budgetLabelText: { fontSize: 11, color: '#8E8E93' },
+  budgetChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#C6C6C8', backgroundColor: '#fff',
+  },
+  budgetChipActive: { backgroundColor: '#FF6B3515', borderColor: '#FF6B35', borderWidth: 1.5 },
+  budgetChipText: { fontSize: 13, fontWeight: '500', color: '#000' },
+  budgetChipTextActive: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
+  locationBtnWrap: {
+    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 10, elevation: 4, marginBottom: 12,
+  },
+  locationBtn: { height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  locationBtnText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  locatedTag: {
+    alignSelf: 'center', backgroundColor: '#FF6B3512', borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 6, marginBottom: 8,
+  },
+  locatedTagText: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
+  orDivider: { textAlign: 'center', fontSize: 13, color: '#8E8E93', marginBottom: 12 },
+  textInput: {
+    height: 52, borderRadius: 10, backgroundColor: '#fff',
+    paddingHorizontal: 14, fontSize: 15, color: '#000',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#C6C6C8',
+  },
+  errorText: { fontSize: 13, color: '#FF3B30', marginTop: 8, lineHeight: 20 },
+  dynQuestion: { fontSize: 17, fontWeight: '600', color: '#000', marginBottom: 10 },
+  textarea: {
+    borderRadius: 10, padding: 14, fontSize: 15, backgroundColor: '#fff', color: '#000',
+    lineHeight: 24, minHeight: 140, textAlignVertical: 'top',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#C6C6C8',
+  },
+  catBtn: {
+    width: '48%', paddingVertical: 16, paddingHorizontal: 12, borderRadius: 14,
+    backgroundColor: '#fff', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E5EA',
+    alignItems: 'center', gap: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4,
+    elevation: 1,
+  },
+  catBtnActive: { backgroundColor: '#FF6B3512', borderColor: '#FF6B35', borderWidth: 1.5 },
+  catIconWrap: { marginBottom: 2 },
+  catLabel: { fontSize: 13, fontWeight: '500', color: '#000', textAlign: 'center', lineHeight: 18 },
+  catLabelActive: { color: '#FF6B35', fontWeight: '600' },
+  reviewCard: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 20, gap: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
+  },
+  reviewLine: { fontSize: 14, color: '#3C3C43', fontWeight: '400', lineHeight: 22 },
+});

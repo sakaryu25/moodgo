@@ -1,0 +1,22 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export const FAVORITES_KEY = "moodgo-favorites";
+export const HISTORY_KEY = "moodgo-history";
+export const FEEDBACK_KEY = "moodgo-feedback";
+export const PENDING_VISITED_KEY = "moodgo-pending-visited";
+export const BLOCKED_PLACES_KEY = "moodgo-blocked-places";
+export const PROFILE_KEY = "moodgo-profile";
+
+export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
+  } catch {}
+  return fallback;
+}
+
+export async function saveJSON(key: string, value: unknown) {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
