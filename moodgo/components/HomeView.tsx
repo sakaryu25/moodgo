@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -182,7 +183,7 @@ export default function HomeView({ profileAge, lang, onStart, onShowProfileEdit,
       {/* ── Header ── */}
       <View style={s.header}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity style={s.suggestBtn} activeOpacity={0.8}>
+          <TouchableOpacity style={s.suggestBtn} activeOpacity={0.8} onPress={() => router.push('/suggest')}>
             <Text style={s.suggestBtnText}>
               📍 {lang === 'en' ? 'Share a spot!' : '穴場を教えて！'}
             </Text>
