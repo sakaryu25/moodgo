@@ -70,6 +70,7 @@ const T = {
     visitModalSub: '実際に訪れた感想を教えてください',
     visitModalSubmit: '送る',
     visitModalSkip: 'スキップ',
+    loadMore: (n: number) => `もっと見る（残り${n}件）`,
   },
   en: {
     back: 'Back',
@@ -103,6 +104,7 @@ const T = {
     visitModalSub: 'Share your experience',
     visitModalSubmit: 'Send',
     visitModalSkip: 'Skip',
+    loadMore: (n: number) => `Show more (${n} remaining)`,
   },
 } as const;
 
@@ -173,12 +175,16 @@ export default function ResultsView(props: Props) {
   } = props;
   const t = T[lang];
 
+  const PAGE_SIZE = 8;
   const [resultSort, setResultSort] = React.useState<'default' | 'rating' | 'near'>('default');
   const [openNowOnly, setOpenNowOnly] = React.useState(false);
   const [unseenOnly, setUnseenOnly] = React.useState(false);
   const [visitedTitles, setVisitedTitles] = React.useState<string[]>([]);
   const [visitingSpot, setVisitingSpot] = React.useState<Recommendation | null>(null);
   const [visitingRating, setVisitingRating] = React.useState(0);
+  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
+
+  React.useEffect(() => { setVisibleCount(PAGE_SIZE); }, [resultSort, openNowOnly, unseenOnly]);
 
   const insets = useSafeAreaInsets();
   const isFav = (title: string) => favorites.some((f) => f.title === title);
@@ -303,7 +309,7 @@ export default function ResultsView(props: Props) {
         ) : null}
 
         {/* Results */}
-        {!isLoading && facilityItems.length > 0 && facilityItems.map((item, i) => (
+        {!isLoading && facilityItems.length > 0 && facilityItems.slice(0, visibleCount).map((item, i) => (
           <PlaceCard
             key={`${item.title}-${i}`}
             item={item}
@@ -317,6 +323,19 @@ export default function ResultsView(props: Props) {
             lang={lang}
           />
         ))}
+
+        {/* Load more */}
+        {!isLoading && visibleCount < facilityItems.length && (
+          <TouchableOpacity
+            onPress={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            style={s.loadMoreBtn}
+            activeOpacity={0.75}
+          >
+            <Text style={s.loadMoreText}>
+              {t.loadMore(facilityItems.length - visibleCount)}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Empty state */}
         {!isLoading && facilityItems.length === 0 && (
@@ -572,6 +591,14 @@ const s = StyleSheet.create({
   starText: { fontSize: 30, color: '#E5E5EA' },
   starActive: { color: '#FF9F0A' },
   feedbackThanks: { fontSize: 15, fontWeight: '600', color: '#34C759' },
+
+  loadMoreBtn: {
+    alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 12,
+    borderRadius: 999, marginBottom: 12,
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#FF6B35',
+    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6,
+  },
+  loadMoreText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
 
   resetBtn: {
     alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 10,
