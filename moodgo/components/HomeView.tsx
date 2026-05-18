@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Settings } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -177,6 +178,7 @@ export default function HomeView({ profileAge, lang, onStart, onShowSettings }: 
   }, []);
 
   const selectMood = useCallback(async (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // bounce animation
     Animated.sequence([
       Animated.timing(scaleAnims[index], { toValue: 1.18, duration: 120, useNativeDriver: true }),

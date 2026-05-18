@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
@@ -75,7 +76,10 @@ export default function TabBar({ homeView, onChangeView, insets, lang = 'ja' }: 
           return (
             <TouchableOpacity
               key={key}
-              onPress={() => onChangeView(key)}
+              onPress={() => {
+                if (homeView !== key) Haptics.selectionAsync();
+                onChangeView(key);
+              }}
               style={s.tab}
               activeOpacity={0.6}
             >

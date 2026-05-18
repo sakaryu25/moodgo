@@ -204,8 +204,8 @@ export default function Home() {
 
   // ─── Featured ───────────────────────────────────────────────────────────
 
-  const loadFeaturedList = async () => {
-    if (featuredList.length > 0) return;
+  const loadFeaturedList = async (force = false) => {
+    if (!force && featuredList.length > 0) return;
     setFeaturedListLoading(true);
     try {
       const res = await apiFetch('/api/featured');
@@ -715,6 +715,7 @@ export default function Home() {
             lang={lang}
             featuredList={featuredList}
             featuredListLoading={featuredListLoading}
+            onRefresh={() => loadFeaturedList(true)}
           />
         );
       default:

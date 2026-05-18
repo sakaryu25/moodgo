@@ -239,7 +239,12 @@ export default function ResultsView(props: Props) {
             <ChevronLeft size={20} color="#FF6B35" strokeWidth={2.5} />
             <Text style={s.backText}>{t.back}</Text>
           </TouchableOpacity>
-          <Text style={s.navTitle} numberOfLines={1}>{pageTitle}</Text>
+          <View style={s.navCenter}>
+            <Text style={s.navTitle} numberOfLines={1}>{pageTitle}</Text>
+            {!isLoading && facilityItems.length > 0 && (
+              <Text style={s.navCount}>{facilityItems.length}{lang === 'ja' ? '件' : ' spots'}</Text>
+            )}
+          </View>
           <View style={s.navRight} />
         </View>
       </View>
@@ -514,7 +519,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 4, minWidth: 72,
   },
   backText: { fontSize: 17, color: '#FF6B35', fontWeight: '400' },
-  navTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: '#000' },
+  navCenter: { flex: 1, alignItems: 'center' },
+  navTitle: { fontSize: 17, fontWeight: '600', color: '#000', textAlign: 'center' },
+  navCount: { fontSize: 11, color: '#8E8E93', fontWeight: '500', marginTop: 1 },
   navRight: { minWidth: 72 },
 
   scroll: { flex: 1 },

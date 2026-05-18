@@ -3,6 +3,7 @@ import { Camera, Star } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { useRouter } from 'expo-router';
 type Props = {
   featuredList: FeaturedPageSummary[];
   featuredListLoading: boolean;
+  onRefresh?: () => void;
   lang?: 'ja' | 'en';
 };
 
@@ -36,7 +38,7 @@ const T = {
   },
 };
 
-export default function FeaturedView({ featuredList, featuredListLoading, lang = 'ja' }: Props) {
+export default function FeaturedView({ featuredList, featuredListLoading, onRefresh, lang = 'ja' }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = T[lang];
@@ -60,6 +62,13 @@ export default function FeaturedView({ featuredList, featuredListLoading, lang =
       style={s.root}
       contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 80 }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={featuredListLoading}
+          onRefresh={onRefresh}
+          tintColor="#FF6B35"
+        />
+      }
     >
       <Text style={s.pageTitle}>{t.title}</Text>
       <Text style={s.pageSub}>{t.sub}</Text>

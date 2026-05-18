@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { Clock, Heart, MapPin, Navigation, Share2, Star, Train } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -107,7 +108,10 @@ export default function PlaceCard({
 
         {/* Fav button */}
         <TouchableOpacity
-          onPress={onToggleFavorite}
+          onPress={() => {
+            Haptics.impactAsync(isFavorited ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
+            onToggleFavorite();
+          }}
           style={[s.favBtn, isFavorited && s.favBtnActive]}
         >
           <Heart
