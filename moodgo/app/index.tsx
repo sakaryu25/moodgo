@@ -47,6 +47,7 @@ import FeaturedView from '@/components/FeaturedView';
 import ProfileSetup from '@/components/ProfileSetup';
 import QuizFlow from '@/components/QuizFlow';
 import ResultsView from '@/components/ResultsView';
+import SettingsView from '@/components/SettingsView';
 import type {
   Recommendation, FavoriteItem, FeedbackItem, HistoryItem,
   Answers, DynamicQuestion, FeaturedPageSummary,
@@ -95,6 +96,7 @@ export default function Home() {
   const [profileAge, setProfileAge] = useState('');
   const [profileGender, setProfileGender] = useState('');
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Results
   const [apiRecommendations, setApiRecommendations] = useState<Recommendation[]>([]);
@@ -723,7 +725,7 @@ export default function Home() {
             profileGender={profileGender}
             lang={lang}
             onStart={() => setStarted(true)}
-            onShowProfileEdit={() => setShowProfileEdit(true)}
+            onShowSettings={() => setShowSettings(true)}
             onToggleLang={() => setLang(lang === 'ja' ? 'en' : 'ja')}
           />
         );
@@ -743,6 +745,23 @@ export default function Home() {
           if (v === 'featured') loadFeaturedList();
         }}
         insets={insets}
+      />
+      <SettingsView
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+        lang={lang}
+        onChangeLang={(l) => setLang(l)}
+        profileAge={profileAge}
+        profileGender={profileGender}
+        onSaveProfile={(age, gender) => {
+          setProfileAge(age);
+          setProfileGender(gender);
+          saveJSON(PROFILE_KEY, { age, gender });
+        }}
+        onClearHistory={() => {
+          setHistory([]);
+          setShowSettings(false);
+        }}
       />
     </View>
   );

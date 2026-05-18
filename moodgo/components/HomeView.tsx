@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { Settings } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -120,13 +121,13 @@ type Props = {
   profileGender: string;
   lang: 'ja' | 'en';
   onStart: () => void;
-  onShowProfileEdit: () => void;
+  onShowSettings: () => void;
   onToggleLang: () => void;
 };
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
-export default function HomeView({ profileAge, lang, onStart, onShowProfileEdit, onToggleLang }: Props) {
+export default function HomeView({ profileAge, lang, onStart, onShowSettings, onToggleLang }: Props) {
   const insets = useSafeAreaInsets();
   const [todayMood, setTodayMood]   = useState<number | null>(null);
   const [weekMoods, setWeekMoods]   = useState<Record<string, number>>({});
@@ -211,11 +212,9 @@ export default function HomeView({ profileAge, lang, onStart, onShowProfileEdit,
           <TouchableOpacity style={s.headerChip} onPress={onToggleLang} activeOpacity={0.8}>
             <Text style={s.headerChipText}>{lang === 'en' ? 'EN' : 'JP'}</Text>
           </TouchableOpacity>
-          {profileAge ? (
-            <TouchableOpacity style={s.headerChip} onPress={onShowProfileEdit} activeOpacity={0.8}>
-              <Text style={s.headerChipText}>{profileAge}</Text>
-            </TouchableOpacity>
-          ) : null}
+          <TouchableOpacity style={s.headerIconBtn} onPress={onShowSettings} activeOpacity={0.7}>
+            <Settings size={20} color="#8E8E93" strokeWidth={2} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -335,6 +334,11 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#f0dfe3',
   },
   headerChipText: { color: '#9b7b82', fontSize: 12, fontWeight: '700' },
+  headerIconBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#f0dfe3',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   // Check-in section
   checkin: {
