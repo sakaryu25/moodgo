@@ -13,6 +13,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY ?? "";
+
+/** Google Places (New) からCDN写真URLを最大 maxCount 枚取得 */
+async function fetchGooglePhotos(placeId: string, maxCount = 6): Promise<string[]> {
+  if (!GOOGLE_API_KEY) return [];
+  try {
+    const res = await fetch(
+      `https://places.googleapis.com/v1/places/${placeId}?languageCode=ja`,
+      {
+        headers: {
+          "X-Goog-Api-Key": GOOGLE_API_KEY,
+          "X-Goog-FieldMask": "photos",
+        },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const photoNames: string[] = (data?.photos ?? [])
+      .slice(0, maxCount)
+      .filter((ph: Record<string, unknown>) => !!ph?.name)
+      .map((ph: Record<string, unknown>) => ph.name as string);
+
+    const cdnUrls = await Promise.all(
+      photoNames.map(async (name) => {
+        try {
+          const mr = await fetch(
+            `https://places.googleapis.com/v1/${name}/media?maxWidthPx=800&skipHttpRedirect=true`,
+            { headers: { "X-Goog-Api-Key": GOOGLE_API_KEY }, cache: "no-store" },
+          );
+          if (!mr.ok) return null;
+          const md = await mr.json().catch(() => null);
+          return (md?.photoUri as string) || null;
+        } catch { return null; }
+      }),
+    );
+    return cdnUrls.filter((u): u is string => !!u && u.startsWith("https://"));
+  } catch { return []; }
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -277,11 +317,31 @@ export async function POST(req: NextRequest) {
       photosMap.get(ph.place_id)!.push(ph.photo_url);
     }
 
+    // ── Google Places API で写真を補強（並列取得）──────────────────────
+    const googlePhotosMap = new Map<string, string[]>();
+    if (GOOGLE_API_KEY) {
+      await Promise.all(
+        selected.map(async (p) => {
+          if (!p.google_place_id) return;
+          const urls = await fetchGooglePhotos(p.google_place_id, 6);
+          if (urls.length > 0) googlePhotosMap.set(p.id, urls);
+        }),
+      );
+    }
+
     const results = selected.map((p) => {
       const distM =
         p.lat != null && p.lng != null ? haversineM(lat, lng, p.lat, p.lng) : null;
       const distKm = distM != null ? (distM / 1000).toFixed(1) : null;
-      const photos = photosMap.get(p.id) ?? [];
+
+      const storedPhotos = photosMap.get(p.id) ?? [];
+      const googlePhotos = googlePhotosMap.get(p.id) ?? [];
+      // Supabase 保存写真 → Google Photos の順で最大 8 枚（重複除外）
+      const allPhotos = [
+        ...storedPhotos,
+        ...googlePhotos.filter(u => !storedPhotos.includes(u)),
+      ].slice(0, 8);
+
       const mainTag =
         (p.tags ?? []).find((t: string) => !["#お腹すいた", "#まったりしたい", "#わいわい楽しみたい", "#ドライブしたい", "#集中したい", "#体動かしたい", "#遠くに行きたい", "#自然感じたい"].includes(t)) ??
         (p.tags ?? [])[0] ??
@@ -293,12 +353,12 @@ export async function POST(req: NextRequest) {
         category: mainTag,
         catchphrase: tagsToTagline(p.tags ?? [], p.name),
         description: p.description ?? "",
-        imageUrl: photos[0] ?? "",
+        imageUrl: allPhotos[0] ?? "",
         rating: null,
         reviewCount: null,
         address: p.address,
         distanceInfo: distKm ? `約${distKm}km` : "距離不明",
-        photoUrls: photos.slice(0, 5),
+        photoUrls: allPhotos,
         openNow: null,
         openingHours: null,
         priceLevel: null,
