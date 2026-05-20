@@ -926,6 +926,8 @@ export default function AdminPage() {
   const [spDeleteConfirm, setSpDeleteConfirm] = useState<string | null>(null); // 削除確認中のスポットID
   const [spDeleting, setSpDeleting]           = useState<Set<string>>(new Set()); // 削除処理中のID集合
   const [spTagRemoving, setSpTagRemoving]     = useState<Set<string>>(new Set()); // タグ削除処理中 "spotId::tag"
+  const [spTagAddInputs, setSpTagAddInputs]   = useState<Record<string, string>>({}); // spotId → 入力中テキスト
+  const [spTagAdding, setSpTagAdding]         = useState<Set<string>>(new Set()); // タグ追加処理中 "spotId::tag"
 
   const handleSpSearch = async () => {
     if (!spSearchKeyword.trim()) return;
@@ -967,6 +969,34 @@ export default function AdminPage() {
       }
     } catch (e) { alert("タグ削除失敗: " + String(e)); }
     setSpTagRemoving(prev => { const n = new Set(prev); n.delete(key); return n; });
+  };
+
+  const handleSpTagAdd = async (spotId: string, tagToAdd: string) => {
+    const key = `${spotId}::${tagToAdd}`;
+    setSpTagAdding(prev => new Set(prev).add(key));
+    const spot = spSearchResults?.find(p => p.id === spotId);
+    if (!spot || spot.tags.includes(tagToAdd)) {
+      setSpTagAdding(prev => { const n = new Set(prev); n.delete(key); return n; });
+      return;
+    }
+    const newTags = [...spot.tags, tagToAdd];
+    try {
+      const res = await fetch("/api/admin/update-place-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: ADMIN_PASSWORD, id: spotId, tags: newTags }),
+      });
+      const data = await res.json();
+      if (!data.ok) { alert("タグ追加失敗: " + (data.error ?? "不明なエラー")); }
+      else {
+        setSpSearchResults(prev => prev
+          ? prev.map(p => p.id === spotId ? { ...p, tags: data.tags } : p)
+          : prev
+        );
+        setSpTagAddInputs(prev => ({ ...prev, [spotId]: "" }));
+      }
+    } catch (e) { alert("タグ追加失敗: " + String(e)); }
+    setSpTagAdding(prev => { const n = new Set(prev); n.delete(key); return n; });
   };
 
   const handleSpDelete = async (id: string) => {
@@ -4001,6 +4031,7 @@ export default function AdminPage() {
                             )}
                           </div>
                           {p.address && <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px" }}>📍 {p.address}</div>}
+                          {/* 既存タグ（×で削除） */}
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
                             {(p.tags ?? []).map(tag => {
                               const removing = spTagRemoving.has(`${p.id}::${tag}`);
@@ -4011,13 +4042,63 @@ export default function AdminPage() {
                                     onClick={() => handleSpTagRemove(p.id, tag)}
                                     disabled={removing}
                                     style={{ background: "none", border: "none", cursor: removing ? "default" : "pointer", padding: "0 1px", fontSize: "10px", lineHeight: 1, color: removing ? "#9ca3af" : "#0e7490", fontWeight: 900, display: "flex", alignItems: "center" }}
-                                    title={`#${tag} を削除`}>
+                                    title={`${tag} を削除`}>
                                     ×
                                   </button>
                                 </span>
                               );
                             })}
                           </div>
+
+                          {/* タグ追加エリア */}
+                          {(() => {
+                            const inputVal = spTagAddInputs[p.id] ?? "";
+                            const q = inputVal.replace(/^#/, "").toLowerCase();
+                            const suggestions = q.length >= 1
+                              ? ALL_PREDEFINED_TAGS.filter(t =>
+                                  !p.tags.includes(t) &&
+                                  t.toLowerCase().replace(/^#/, "").includes(q)
+                                ).slice(0, 8)
+                              : [];
+                            return (
+                              <div style={{ marginTop: "8px", position: "relative" }}>
+                                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                  <input
+                                    type="text"
+                                    value={inputVal}
+                                    onChange={e => setSpTagAddInputs(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter" && suggestions.length === 1) {
+                                        handleSpTagAdd(p.id, suggestions[0]);
+                                      }
+                                    }}
+                                    placeholder="＋ タグを追加（例: 温泉）"
+                                    style={{ flex: 1, height: "28px", borderRadius: "6px", border: "1px solid #a5f3fc", padding: "0 8px", fontSize: "11px", outline: "none", fontFamily: "inherit", background: "#f0fdff" }}
+                                  />
+                                </div>
+                                {/* もしかしてこれ？サジェスト */}
+                                {suggestions.length > 0 && (
+                                  <div style={{ marginTop: "4px", padding: "4px 6px", background: "#fff", border: "1px solid #a5f3fc", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                                    <div style={{ fontSize: "9px", color: "#0891b2", fontWeight: 800, marginBottom: "4px" }}>もしかしてこれ？</div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                      {suggestions.map(sug => {
+                                        const adding = spTagAdding.has(`${p.id}::${sug}`);
+                                        return (
+                                          <button
+                                            key={sug}
+                                            onClick={() => handleSpTagAdd(p.id, sug)}
+                                            disabled={adding}
+                                            style={{ padding: "2px 8px", borderRadius: "999px", border: "1px solid #0891b2", background: adding ? "#e0f7fa" : "#fff", color: "#0891b2", fontSize: "10px", fontWeight: 700, cursor: adding ? "default" : "pointer", opacity: adding ? 0.6 : 1, fontFamily: "inherit" }}>
+                                            {adding ? "追加中…" : sug}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>
