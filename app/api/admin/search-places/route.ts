@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     .select("id, name, address, tags, is_active, google_place_id")
     .or(`name.ilike.%${keyword}%,address.ilike.%${keyword}%`)
     .order("name")
-    .limit(50);
+    .limit(1000);
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 

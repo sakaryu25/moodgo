@@ -3995,10 +3995,10 @@ export default function AdminPage() {
               {spSearchResults !== null && (
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "#0891b2", marginBottom: "8px" }}>
-                    {spSearchResults.length === 0 ? "⚠️ 該当なし（未登録）" : `✅ ${spSearchResults.length}件 登録済み（最大50件）`}
+                    {spSearchResults.length === 0 ? "⚠️ 該当なし（未登録）" : `✅ ${spSearchResults.length}件 登録済み`}
                   </div>
                   {spSearchResults.length > 0 && (
-                    <div style={{ display: "grid", gap: "6px", maxHeight: "400px", overflowY: "auto" }}>
+                    <div style={{ display: "grid", gap: "6px", maxHeight: "600px", overflowY: "auto" }}>
                       {spSearchResults.map(p => (
                         <div key={p.id} style={{ padding: "8px 12px", borderRadius: "8px", background: "#f0fdff", border: "1px solid #a5f3fc", position: "relative" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
