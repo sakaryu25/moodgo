@@ -61,13 +61,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(targetUrl, { status: 302 });
   }
 
+  // ── 旧 Maps API 写真（maps.googleapis.com/maps/api/place/photo）────────────
+  // photo_reference は保存時のキーを剥がして現在のキーで再リクエスト
+  if (targetUrl.includes("maps.googleapis.com/maps/api/place/photo")) {
+    if (!GOOGLE_API_KEY) return new NextResponse("API key not configured", { status: 503 });
+    try {
+      const urlObj = new URL(targetUrl);
+      const photoRef = urlObj.searchParams.get("photo_reference") ?? urlObj.searchParams.get("photoreference");
+      const maxWidth = urlObj.searchParams.get("maxwidth") ?? urlObj.searchParams.get("maxWidth") ?? "800";
+      if (photoRef) {
+        const freshUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${photoRef}&key=${GOOGLE_API_KEY}`;
+        const res = await fetch(freshUrl, { cache: "no-store", redirect: "follow" });
+        if (res.ok) {
+          const contentType = res.headers.get("content-type") ?? "image/jpeg";
+          const buf = await res.arrayBuffer();
+          return new NextResponse(buf, {
+            status: 200,
+            headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=86400" },
+          });
+        }
+      }
+    } catch { /* fallthrough */ }
+  }
+
   // ── その他: サーバーサイドフェッチして転送 ────────────────────────────────
   try {
     const headers: Record<string, string> = {};
     if (targetUrl.includes("googleapis.com") && GOOGLE_API_KEY) {
       headers["X-Goog-Api-Key"] = GOOGLE_API_KEY;
     }
-    const res = await fetch(targetUrl, { headers, cache: "no-store" });
+    const res = await fetch(targetUrl, { headers, cache: "no-store", redirect: "follow" });
     if (!res.ok) return new NextResponse("fetch failed", { status: res.status });
 
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
