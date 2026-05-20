@@ -77,7 +77,6 @@ type HistoryItem = {
   budget: number;
   time: string;
   atmosphere: string;
-  priority: string;
   freeWord: string;
   topRecommendation: string;
   createdAt?: string;
@@ -96,7 +95,6 @@ type Answers = {
   budgetMin?: number;
   time: string;
   atmosphere: string;
-  priority: string;
   freeWord: string;
   originLat?: number;
   originLng?: number;
@@ -160,7 +158,6 @@ export default function Home() {
   const [showUnseenOnly, setShowUnseenOnly] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedAtmosphere, setSelectedAtmosphere] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState("");
   const [freeWord, setFreeWord] = useState("");
   const [dynamicQuestions, setDynamicQuestions] = useState<DynamicQuestion[]>([]);
   const [dynamicAnswers, setDynamicAnswers] = useState<Record<string, string>>({});
@@ -516,14 +513,6 @@ export default function Home() {
     "アットホーム",
   ];
 
-  const priorityOptions = [
-    "コスパ",
-    "映え",
-    "距離",
-    "快適さ",
-    "楽しさ",
-    "質の高さ",
-  ];
 
   // ===== English translations (display only; JP values go to API) =====
   const MOOD_EN: Record<string, { label: string; sub: string }> = {
@@ -545,7 +534,6 @@ export default function Home() {
     transport:   ["Walking", "Bicycle", "Train / Bus", "Car / Bike", "Any"],
     time:        ["15-30 min", "30-60 min", "1-2 hrs", "2-4 hrs", "4-6 hrs", "6+ hrs"],
     atmosphere:  ["Quiet", "Lively", "Active", "Thrilling", "Romantic", "Homey"],
-    priority:    ["Value", "Instagrammable", "Proximity", "Comfort", "Fun", "Quality"],
   };
 
   const MOOD_QUESTIONS_EN: Record<string, DynamicQuestion[]> = {
@@ -660,8 +648,6 @@ export default function Home() {
     // Step 7 / 8 (dynamic fallback)
     step7Title: "What kind of vibe?",
     step7Subtitle: "Pick the atmosphere that suits you. You can skip.",
-    step8Title: "What's most important?",
-    step8Subtitle: "Choose your top priority. You can skip.",
     moodDetailTag: "Tell us more about your mood",
     moodDetailSub: "You can skip.",
     // Step 9
@@ -1160,7 +1146,6 @@ export default function Home() {
     budgetMin: budget !== undefined ? budgetMin : undefined,
     time: selectedTime,
     atmosphere: selectedAtmosphere,
-    priority: selectedPriority,
     freeWord,
     originLat,
     originLng,
@@ -1401,7 +1386,6 @@ export default function Home() {
     setBudgetMin(0);
     setSelectedTime("");
     setSelectedAtmosphere("");
-    setSelectedPriority("");
     setFreeWord("");
     setSelectedArea("");
     setLocationDisplayArea("");
@@ -2179,7 +2163,6 @@ export default function Home() {
         budget: answers.budget ?? 0,
         time: answers.time,
         atmosphere: answers.atmosphere,
-        priority: answers.priority,
         freeWord: answers.freeWord,
         topRecommendation,
         createdAt: new Date().toISOString(),
@@ -2323,7 +2306,6 @@ export default function Home() {
         companion: answers.companion,
         transport: answers.transport,
         atmosphere: answers.atmosphere,
-        priority: answers.priority,
         freeWord: answers.freeWord,
         dynamicQ1: answers.dynamicQ1,
         dynamicQ2: answers.dynamicQ2,
@@ -2354,7 +2336,6 @@ export default function Home() {
         gender: answers.gender,
         companion: answers.companion,
         atmosphere: answers.atmosphere,
-        priority: answers.priority,
         topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
         rating,
         visitedPlace: placeTitle,
@@ -3033,7 +3014,6 @@ export default function Home() {
               {sa.budget !== undefined && <div>{lang === "en" ? "Budget" : "予算"}：{sa.budgetMin && sa.budgetMin > 0 ? `¥${sa.budgetMin.toLocaleString("ja-JP")}〜¥${sa.budget.toLocaleString("ja-JP")}` : `〜¥${sa.budget.toLocaleString("ja-JP")}`}</div>}
               {sa.time && <div>{lang === "en" ? "Time" : "時間"}：{sa.time}</div>}
               {sa.atmosphere && <div>{lang === "en" ? "Vibe" : "雰囲気"}：{sa.atmosphere}</div>}
-              {sa.priority && <div>{lang === "en" ? "Priority" : "優先"}：{sa.priority}</div>}
             </div>
 
             {/* 結果カード一覧 */}
@@ -6907,8 +6887,6 @@ export default function Home() {
                     // 雰囲気（回答済みの場合のみ）
                     if (answers.atmosphere) items.push({ icon: "✨", isImg: false, label: lang === "en" ? "Vibe" : "雰囲気", value: answers.atmosphere });
 
-                    // 優先（回答済みの場合のみ）
-                    if (answers.priority) items.push({ icon: "🏆", isImg: false, label: lang === "en" ? "Priority" : "優先", value: answers.priority });
 
                     // 自由ワード
                     if (answers.freeWord) items.push({ icon: "🔍", isImg: false, label: lang === "en" ? "Keyword" : "キーワード", value: answers.freeWord });
@@ -7543,8 +7521,7 @@ export default function Home() {
                               companion: answers.companion,
                               transport: answers.transport,
                               atmosphere: answers.atmosphere,
-                              priority: answers.priority,
-                              freeWord: answers.freeWord,
+                                                    freeWord: answers.freeWord,
                               dynamicQ1: answers.dynamicQ1,
                               dynamicQ2: answers.dynamicQ2,
                               dynamicQ3: answers.dynamicQ3,
@@ -7573,8 +7550,7 @@ export default function Home() {
                               gender: answers.gender,
                               companion: answers.companion,
                               atmosphere: answers.atmosphere,
-                              priority: answers.priority,
-                              topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
+                                                    topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
                               rating: feedbackRating,
                               visitedPlace: "",
                               likedPlaces: likedInSession,
