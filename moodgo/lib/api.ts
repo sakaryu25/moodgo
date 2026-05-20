@@ -1,6 +1,6 @@
 // 本番 URL（Vercel にデプロイした Next.js の URL）
 // ビルド前に moodgo/.env に EXPO_PUBLIC_API_BASE_URL=https://your-app.vercel.app を設定
-const PROD_API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://moodgo.vercel.app";
+const PROD_API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://moodgo-qvmk.vercel.app";
 
 // 開発時: LAN IPを .env で指定 → 実機でも localhost ではなく LAN IP が必要
 // 例: EXPO_PUBLIC_API_BASE_URL=http://192.168.x.x:3000

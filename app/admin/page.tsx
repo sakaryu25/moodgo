@@ -5,6 +5,20 @@ import { TAG_CATEGORIES, MOOD_TAGS, ALL_PREDEFINED_TAGS } from "@/lib/predefined
 
 const ADMIN_PASSWORD = "moodgoadmin123";
 
+function proxyPhoto(url?: string): string {
+  if (!url) return "";
+  if (url.startsWith("/") || url.includes("/api/photo-proxy")) return url;
+  if (
+    url.includes("places.googleapis.com") ||
+    url.includes("lh3.googleusercontent.com") ||
+    url.includes("maps.gstatic.com") ||
+    url.includes("streetviewpixels-pa.googleapis.com")
+  ) {
+    return `/api/photo-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 type StatsData = {
   totalCount: number;
   avgRating: number | null;
@@ -2464,7 +2478,7 @@ export default function AdminPage() {
                       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
                         {s.image_urls.map((url, i) => (
                           <a key={i} href={url} target="_blank" rel="noreferrer">
-                            <img src={url} alt={`img-${i}`} style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "12px", border: "1px solid #f0dfe3" }} />
+                            <img src={proxyPhoto(url)} alt={`img-${i}`} style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "12px", border: "1px solid #f0dfe3" }} />
                           </a>
                         ))}
                       </div>
@@ -2931,7 +2945,7 @@ export default function AdminPage() {
                                   transition: "all 0.15s",
                                 }}
                               >
-                                <img src={url} alt={`photo-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                <img src={proxyPhoto(url)} alt={`photo-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                               </div>
                             ))}
                           </div>
@@ -3780,7 +3794,7 @@ export default function AdminPage() {
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                                   {editSpotExistingImages.map((url, i) => (
                                     <div key={i} style={{ position: "relative", width: "80px", height: "64px", borderRadius: "8px", overflow: "hidden", border: "1.5px solid #d0e0ff" }}>
-                                      <img src={url} alt={`img-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                      <img src={proxyPhoto(url)} alt={`img-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                       <button
                                         onClick={() => setEditSpotExistingImages((prev) => prev.filter((_, j) => j !== i))}
                                         style={{ position: "absolute", top: "2px", right: "2px", width: "18px", height: "18px", borderRadius: "999px", background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", fontSize: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font }}
@@ -4149,7 +4163,7 @@ export default function AdminPage() {
 
                           {/* 写真 */}
                           {c.photoUrls[0] && (
-                            <img src={c.photoUrls[0]} alt={c.name}
+                            <img src={proxyPhoto(c.photoUrls[0])} alt={c.name}
                               style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "10px", flexShrink: 0 }} />
                           )}
 
@@ -4666,7 +4680,7 @@ export default function AdminPage() {
                               {r.spots.map((spot, si) => (
                                 <div key={si} style={{ display: "flex", gap: "10px", padding: "6px 8px", borderRadius: "6px", background: "#fafafa", border: "1px solid #f3f4f6" }}>
                                   {spot.photoUrl && (
-                                    <img src={spot.photoUrl} alt={spot.name} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "6px", flexShrink: 0 }} />
+                                    <img src={proxyPhoto(spot.photoUrl)} alt={spot.name} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "6px", flexShrink: 0 }} />
                                   )}
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontWeight: 800, fontSize: "13px", color: "#1f2937" }}>{spot.name}</div>

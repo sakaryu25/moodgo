@@ -101,13 +101,28 @@ async function fetchGooglePlaceDetail(
     if (!res.ok) return null;
     const d = await res.json();
 
-    // 写真URL最大5枚（Places API メディアURLを直接使用）
-    const photoUrls: string[] = (d.photos ?? [])
+    // 写真URL最大5枚: skipHttpRedirect=true でサーバー側にCDN URL(lh3.googleusercontent.com)を解決
+    // → ブラウザにAPIキーを渡さず、どのドメインからも画像が表示できる
+    const photoNames: string[] = (d.photos ?? [])
       .slice(0, 5)
       .filter((ph: Record<string, unknown>) => !!ph?.name)
-      .map((ph: Record<string, unknown>) =>
-        `https://places.googleapis.com/v1/${ph.name}/media?maxWidthPx=800&key=${apiKey}`
-      );
+      .map((ph: Record<string, unknown>) => ph.name as string);
+
+    const photoUrls: string[] = (
+      await Promise.all(
+        photoNames.map(async (name) => {
+          try {
+            const mediaRes = await fetch(
+              `https://places.googleapis.com/v1/${name}/media?maxWidthPx=800&skipHttpRedirect=true`,
+              { headers: { "X-Goog-Api-Key": apiKey }, cache: "no-store" }
+            );
+            if (!mediaRes.ok) return null;
+            const mediaData = await mediaRes.json().catch(() => null);
+            return (mediaData?.photoUri as string) || null;
+          } catch { return null; }
+        })
+      )
+    ).filter((u): u is string => !!u && u.startsWith("https://"));
 
     // 営業時間テキスト
     const hours = d.currentOpeningHours ?? d.regularOpeningHours;

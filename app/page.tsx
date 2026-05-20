@@ -127,6 +127,23 @@ const LOADING_MESSAGES = [
   "あなただけのプランを組み立て中...",
 ];
 
+/** Google Places 写真 URL をサーバー側プロキシ経由に変換する */
+function proxyPhoto(url?: string): string {
+  if (!url) return "";
+  // すでにプロキシ済み or 内部パス はそのまま
+  if (url.startsWith("/") || url.includes("/api/photo-proxy")) return url;
+  // Google Places の写真 URL はプロキシ経由で返す
+  if (
+    url.includes("places.googleapis.com") ||
+    url.includes("lh3.googleusercontent.com") ||
+    url.includes("maps.gstatic.com") ||
+    url.includes("streetviewpixels-pa.googleapis.com")
+  ) {
+    return `/api/photo-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 export default function Home() {
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(1);
@@ -3027,7 +3044,7 @@ export default function Home() {
                 {recs.map((rec, idx) => {
                   const favorited = isFavorited(rec.title);
                   const pi = photoIndices[rec.title] ?? 0;
-                  const photos = rec.photoUrls ?? (rec.photoUrl ? [rec.photoUrl] : []);
+                  const photos = (rec.photoUrls ?? (rec.photoUrl ? [rec.photoUrl] : [])).map(proxyPhoto);
                   return (
                     <div key={`${rec.title}-${idx}`} style={resultCardStyle} className="result-card">
                       {/* 写真 */}
@@ -3339,7 +3356,7 @@ export default function Home() {
                 >
                   {item.photoUrl ? (
                     <img
-                      src={item.photoUrl}
+                      src={proxyPhoto(item.photoUrl)}
                       alt={item.title}
                       style={{
                         width: "90px",
@@ -5544,7 +5561,7 @@ export default function Home() {
                       ) : (
                         <div className="result-list" style={{ display: "grid", gap: "18px", marginBottom: "24px" }}>
                           {visible.map((fac, idx) => {
-                            const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                            const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                             const item: Recommendation = {
                               title: fac.name,
                               reason: fac.description || undefined,
@@ -5662,7 +5679,7 @@ export default function Home() {
                       </div>
                       {visible.map((fac, idx) => {
                         const col = RANDOM_COLORS[idx % RANDOM_COLORS.length];
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const favorited = isFavorited(fac.name);
                         return (
                           <div key={`random-${fac.id}-${idx}`} style={{ ...resultCardStyle, border: `1.5px solid ${col.border}`, marginBottom: "16px" }} className="result-card">
@@ -5752,7 +5769,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -5851,7 +5868,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -5970,7 +5987,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -6070,7 +6087,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -6185,7 +6202,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -6300,7 +6317,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -6412,7 +6429,7 @@ export default function Home() {
                         </div>
                       );
                       return visible.map((fac, idx) => {
-                        const photoList = (fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : [];
+                        const photoList = ((fac.photoUrls ?? []).length > 0 ? fac.photoUrls : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                         const item: Recommendation = {
                           title:            fac.name,
                           address:          fac.address,
@@ -6529,9 +6546,9 @@ export default function Home() {
                       <div className="result-list" style={{ display: "grid", gap: "18px", marginBottom: "24px" }}>
                         {visibleOnsen.map((fac, idx) => {
                           // PlaceResponse → Recommendation 変換（グルメ画面と完全統一）
-                          const photoList = (fac.photoUrls ?? []).length > 0
+                          const photoList = ((fac.photoUrls ?? []).length > 0
                             ? fac.photoUrls
-                            : fac.imageUrl ? [fac.imageUrl] : [];
+                            : fac.imageUrl ? [fac.imageUrl] : []).map(proxyPhoto);
                           const item: Recommendation = {
                             title:            fac.name,
                             reason:           fac.description || undefined,   // ✨ AIおすすめ理由
