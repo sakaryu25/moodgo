@@ -616,6 +616,14 @@ export default function QuizFlow(props: Props) {
     if (!hasContent) onSetStep(7);
   }, [step, selectedMood]);
 
+  useEffect(() => {
+    if (step !== 9) return;
+    const showsDetail =
+      isNatureMode ||
+      (isCafeMode && (cafeSubCategory === 'animal' || cafeSubCategory === 'view'));
+    if (!showsDetail) onSetStep(10);
+  }, [step, selectedMood, cafeSubCategory]);
+
   const foodGenreAns = dynamicAnswers['food_genre_new'] ?? '';
   const matchedFoodGenre = Object.keys(FOOD_SUB_QUESTIONS_MAP).find(k => foodGenreAns.includes(k));
   const foodSubQ = matchedFoodGenre ? FOOD_SUB_QUESTIONS_MAP[matchedFoodGenre] : null;
@@ -1558,18 +1566,7 @@ export default function QuizFlow(props: Props) {
         );
       }
 
-      // Default step 9: Priority
-      const priorOpts = lang === 'en' ? PRIORITY_EN : PRIORITY_OPTIONS;
-      return (
-        <>
-          <Text style={s.stepTitle}>{t.priorTitle}</Text>
-          <Text style={s.stepSub}>{t.priorSub}</Text>
-          {renderOptions(priorOpts, lang === 'en' ? PRIORITY_EN[PRIORITY_OPTIONS.indexOf(selectedPriority)] ?? selectedPriority : selectedPriority, (v) => {
-            const idx = priorOpts.indexOf(v);
-            onSelectPriority(idx >= 0 ? PRIORITY_OPTIONS[idx] : v);
-          }, 2)}
-        </>
-      );
+      return null;
     }
 
     return null;
