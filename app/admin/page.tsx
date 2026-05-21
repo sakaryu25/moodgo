@@ -1021,7 +1021,8 @@ export default function AdminPage() {
 
   // ─── 有名スポット一括手動登録 ────────────────────────────────────────────────
   const [manualText, setManualText]           = useState("");
-  const [manualFixedTagsInput, setManualFixedTagsInput] = useState(""); // 例: "#夜景 #絶景スポット"
+  const [manualFixedTagsInput, setManualFixedTagsInput] = useState(""); // サジェスト用入力欄
+  const [manualFixedTags, setManualFixedTags] = useState<string[]>([]); // 選択済み固定タグ
   const [manualDryRun, setManualDryRun]       = useState(true);
   const [manualLoading, setManualLoading]     = useState(false);
   const [manualError, setManualError]         = useState("");
@@ -1031,17 +1032,12 @@ export default function AdminPage() {
   const handleManualRegister = async () => {
     const names = manualText.split("\n").map(s => s.trim()).filter(Boolean);
     if (names.length === 0) { setManualError("場所名を入力してください"); return; }
-    // 固定タグをスペース・読点・カンマで分割し、#で始まるもののみ採用
-    const fixedTags = manualFixedTagsInput
-      .split(/[\s,、]+/)
-      .map(t => t.trim())
-      .filter(t => t.startsWith("#") && t.length > 1);
     setManualError(""); setManualResults(null); setManualSummary(null); setManualLoading(true);
     try {
       const res = await fetch("/api/admin/manual-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: ADMIN_PASSWORD, names, dryRun: manualDryRun, fixedTags }),
+        body: JSON.stringify({ secret: ADMIN_PASSWORD, names, dryRun: manualDryRun, fixedTags: manualFixedTags }),
       });
       const data = await res.json();
       if (!data.ok) { setManualError(data.error ?? "エラー"); }
@@ -5128,39 +5124,67 @@ export default function AdminPage() {
                 style={{ width: "100%", minHeight: "180px", borderRadius: "12px", border: "1.5px solid #c4b5fd", padding: "12px 14px", fontSize: "13px", fontFamily: font, outline: "none", resize: "vertical", background: "#faf5ff", boxSizing: "border-box", lineHeight: 1.7 }}
               />
 
-              {/* ── 固定タグ入力 ── */}
+              {/* ── 固定タグ入力（定義済みタグのみ・サジェスト付き） ── */}
               <div style={{ marginTop: "14px", padding: "14px 16px", borderRadius: "12px", background: "#fefce8", border: "1.5px solid #fde68a" }}>
                 <div style={{ fontWeight: 800, fontSize: "13px", color: "#92400e", marginBottom: "6px" }}>
-                  📌 全件に固定する#タグ（自分で指定）
+                  📌 全件に固定する#タグ（定義済みタグから選択）
                 </div>
                 <div style={{ fontSize: "12px", color: "#78350f", marginBottom: "10px", lineHeight: 1.6 }}>
-                  ここに入力した#タグは<strong>全スポットに必ず付与</strong>されます。AIが生成したタグに追加してマージします。<br />
-                  スペース区切りで複数指定可。例：<code style={{ background: "#fef3c7", padding: "1px 5px", borderRadius: "4px" }}>#夜景 #絶景スポット #ドライブしたい</code>
+                  選択した#タグは<strong>全スポットに必ず付与</strong>されます。AIが生成したタグに追加してマージします。
                 </div>
+
+                {/* 選択済みタグ */}
+                {manualFixedTags.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
+                    {manualFixedTags.map(tag => (
+                      <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: "3px", background: "#d97706", color: "#fff", borderRadius: "999px", padding: "2px 8px 2px 10px", fontSize: "11px", fontWeight: 800 }}>
+                        {tag}
+                        <button
+                          onClick={() => setManualFixedTags(prev => prev.filter(t => t !== tag))}
+                          style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: "0 1px", fontSize: "11px", fontWeight: 900, lineHeight: 1, opacity: 0.85 }}>
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    <span style={{ fontSize: "11px", color: "#92400e", alignSelf: "center", marginLeft: "4px" }}>← 全スポットに付与</span>
+                  </div>
+                )}
+
+                {/* 検索入力 */}
                 <input
                   type="text"
                   value={manualFixedTagsInput}
                   onChange={e => setManualFixedTagsInput(e.target.value)}
-                  placeholder="#夜景 #絶景スポット（空欄ならAIに全任せ）"
-                  style={{ width: "100%", borderRadius: "10px", border: "1.5px solid #fcd34d", padding: "10px 14px", fontSize: "13px", fontFamily: font, outline: "none", background: "#fffbeb", boxSizing: "border-box" }}
+                  placeholder="タグ名を入力（例: 夜景、絶景）"
+                  style={{ width: "100%", borderRadius: "10px", border: "1.5px solid #fcd34d", padding: "8px 14px", fontSize: "13px", fontFamily: font, outline: "none", background: "#fffbeb", boxSizing: "border-box" }}
                 />
-                {/* 入力されたタグのプレビュー */}
-                {manualFixedTagsInput.trim() && (() => {
-                  const preview = manualFixedTagsInput.split(/[\s,、]+/).map(t => t.trim()).filter(t => t.startsWith("#") && t.length > 1);
-                  const invalid = manualFixedTagsInput.split(/[\s,、]+/).map(t => t.trim()).filter(t => t && !t.startsWith("#"));
+
+                {/* もしかしてこれ？サジェスト */}
+                {(() => {
+                  const q = manualFixedTagsInput.replace(/^#/, "").toLowerCase();
+                  const suggestions = q.length >= 1
+                    ? ALL_PREDEFINED_TAGS.filter(t =>
+                        !manualFixedTags.includes(t) &&
+                        t.toLowerCase().replace(/^#/, "").includes(q)
+                      ).slice(0, 10)
+                    : [];
+                  if (suggestions.length === 0) return null;
                   return (
-                    <div style={{ marginTop: "8px" }}>
-                      {preview.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: invalid.length > 0 ? "6px" : 0 }}>
-                          {preview.map(tag => (
-                            <span key={tag} style={{ background: "#d97706", color: "#fff", borderRadius: "999px", padding: "2px 10px", fontSize: "11px", fontWeight: 800 }}>{tag}</span>
-                          ))}
-                          <span style={{ fontSize: "11px", color: "#92400e", alignSelf: "center", marginLeft: "4px" }}>← 全{preview.length}件のスポットに付与されます</span>
-                        </div>
-                      )}
-                      {invalid.length > 0 && (
-                        <div style={{ fontSize: "11px", color: "#dc2626" }}>⚠ #始まりでない語は無視されます: {invalid.join(", ")}</div>
-                      )}
+                    <div style={{ marginTop: "6px", padding: "6px 8px", background: "#fff", border: "1px solid #fcd34d", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
+                      <div style={{ fontSize: "10px", color: "#92400e", fontWeight: 800, marginBottom: "5px" }}>もしかしてこれ？</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        {suggestions.map(sug => (
+                          <button
+                            key={sug}
+                            onClick={() => {
+                              setManualFixedTags(prev => prev.includes(sug) ? prev : [...prev, sug]);
+                              setManualFixedTagsInput("");
+                            }}
+                            style={{ padding: "2px 10px", borderRadius: "999px", border: "1px solid #d97706", background: "#fff", color: "#92400e", fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: font }}>
+                            {sug}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}
