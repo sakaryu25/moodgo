@@ -5909,23 +5909,19 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
-                              {fac.description && (
-                                <div style={{ fontSize: "14px", color: "#c2410c", fontWeight: 700, marginBottom: "8px" }}>🏃 {fac.description}</div>
-                              )}
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
-                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer"
-                                    style={{ display: "inline-block", padding: "10px 20px", borderRadius: "999px", background: "linear-gradient(135deg, #ea580c, #c2410c)", color: "#fff", fontSize: "14px", fontWeight: 900, textDecoration: "none" }}>
-                                    Google マップで見る →
+                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                    Googleマップで見る
                                   </a>
                                 )}
                                 <button onClick={() => toggleVisited(item.title)} style={{ padding: "10px 16px", borderRadius: "999px", border: visited ? "none" : "1.5px solid #d1d5db", background: visited ? "#16a34a" : "transparent", color: visited ? "#fff" : "#6b7280", fontSize: "13px", fontWeight: 900, cursor: "pointer" }}>
@@ -6008,23 +6004,19 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
-                              {fac.description && (
-                                <div style={{ fontSize: "14px", color: "#6d28d9", fontWeight: 700, marginBottom: "8px" }}>📚 {fac.description}</div>
-                              )}
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
-                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer"
-                                    style={{ display: "inline-block", padding: "10px 20px", borderRadius: "999px", background: "linear-gradient(135deg, #7c3aed, #5b21b6)", color: "#fff", fontSize: "14px", fontWeight: 900, textDecoration: "none" }}>
-                                    Google マップで見る →
+                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                    Googleマップで見る
                                   </a>
                                 )}
                                 <button onClick={() => toggleVisited(item.title)} style={{ padding: "10px 16px", borderRadius: "999px", border: visited ? "none" : "1.5px solid #d1d5db", background: visited ? "#16a34a" : "transparent", color: visited ? "#fff" : "#6b7280", fontSize: "13px", fontWeight: 900, cursor: "pointer" }}>
@@ -6127,23 +6119,19 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
-                              {fac.description && (
-                                <div style={{ fontSize: "14px", color: "#b45309", fontWeight: 700, marginBottom: "8px" }}>🗺️ {fac.description}</div>
-                              )}
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
-                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer"
-                                    style={{ display: "inline-block", padding: "10px 20px", borderRadius: "999px", background: "linear-gradient(135deg, #d97706, #b45309)", color: "#fff", fontSize: "14px", fontWeight: 900, textDecoration: "none" }}>
-                                    Google マップで見る →
+                                  <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                    Googleマップで見る
                                   </a>
                                 )}
                                 <button onClick={() => toggleVisited(item.title)} style={{ padding: "10px 16px", borderRadius: "999px", border: visited ? "none" : "1.5px solid #d1d5db", background: visited ? "#16a34a" : "transparent", color: visited ? "#fff" : "#6b7280", fontSize: "13px", fontWeight: 900, cursor: "pointer" }}>
@@ -6227,36 +6215,18 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
-                              {fac.description && (
-                                <div style={{ fontSize: "14px", color: "#1565c0", fontWeight: 700, marginBottom: "8px" }}>🚗 {fac.description}</div>
-                              )}
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
-                                {item.openNow !== undefined || item.openingHoursText ? (
-                                  <div style={getOpeningChipStyle(item.openNow)}>
-                                    🕒 {item.openNow === true ? "営業中" : item.openNow === false ? "閉店中" : "営業時間あり"}
-                                  </div>
-                                ) : null}
+                                {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
+                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
-                                {item.openingHoursText || item.openNow !== undefined ? (
-                                  <div style={{ ...infoLineStyle, alignItems: "flex-start" }}>
-                                    <span style={{ fontSize: "20px", flexShrink: 0 }}>🕒</span>
-                                    <span style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>{formatOpeningHours(item.openingHoursText) || (item.openNow ? "営業中" : "閉店中")}</span>
-                                  </div>
-                                ) : null}
-                                {item.stationText ? (
-                                  <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>🚉</span><span>{item.stationText}</span></div>
-                                ) : null}
-                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>{travelIcon}</span><span>{iconToModeLabel(travelIcon)}{item.durationText || item.distanceText}</span></div> : null; })()}
-                              </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
-                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ height: "52px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px", boxShadow: "0 10px 22px rgba(13,71,161,0.22)" }}>
+                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
                                     Googleマップで見る
                                   </a>
                                 ) : null}
@@ -6340,36 +6310,18 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
-                              {fac.description && (
-                                <div style={{ fontSize: "14px", color: "#c0186a", fontWeight: 700, marginBottom: "8px" }}>✨ {fac.description}</div>
-                              )}
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
-                                {item.openNow !== undefined || item.openingHoursText ? (
-                                  <div style={getOpeningChipStyle(item.openNow)}>
-                                    🕒 {item.openNow === true ? "営業中" : item.openNow === false ? "閉店中" : "営業時間あり"}
-                                  </div>
-                                ) : null}
+                                {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
+                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
-                                {item.openingHoursText || item.openNow !== undefined ? (
-                                  <div style={{ ...infoLineStyle, alignItems: "flex-start" }}>
-                                    <span style={{ fontSize: "20px", flexShrink: 0 }}>🕒</span>
-                                    <span style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>{formatOpeningHours(item.openingHoursText) || (item.openNow ? "営業中" : "閉店中")}</span>
-                                  </div>
-                                ) : null}
-                                {item.stationText ? (
-                                  <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>🚉</span><span>{item.stationText}</span></div>
-                                ) : null}
-                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>{travelIcon}</span><span>{iconToModeLabel(travelIcon)}{item.durationText || item.distanceText}</span></div> : null; })()}
-                              </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
-                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ height: "52px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #ff4da6 0%, #c0186a 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px", boxShadow: "0 10px 22px rgba(192,24,106,0.2)" }}>
+                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
                                     Googleマップで見る
                                   </a>
                                 ) : null}
@@ -6453,32 +6405,18 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
-                                {item.openNow !== undefined || item.openingHoursText ? (
-                                  <div style={getOpeningChipStyle(item.openNow)}>
-                                    🕒 {item.openNow === true ? "営業中" : item.openNow === false ? "閉店中" : "営業時間あり"}
-                                  </div>
-                                ) : null}
+                                {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
+                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
-                                {item.openingHoursText || item.openNow !== undefined ? (
-                                  <div style={{ ...infoLineStyle, alignItems: "flex-start" }}>
-                                    <span style={{ fontSize: "20px", flexShrink: 0 }}>🕒</span>
-                                    <span style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
-                                      {formatOpeningHours(item.openingHoursText) || (item.openNow ? "営業中" : "閉店中")}
-                                    </span>
-                                  </div>
-                                ) : null}
-                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>{travelIcon}</span><span>{iconToModeLabel(travelIcon)}{item.durationText || item.distanceText}</span></div> : null; })()}
-                              </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
-                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ height: "52px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
                                     Googleマップで見る
                                   </a>
                                 ) : null}
@@ -6565,35 +6503,18 @@ export default function Home() {
                               {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                             </div>
                             <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                <div className="result-title" style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", flex: 1 }}>{item.title}</div>
-                              </div>
+                              <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                              {fac.description ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{fac.description}</div> : null}
                               {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
                                 {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
-                                {item.openNow !== undefined || item.openingHoursText ? (
-                                  <div style={getOpeningChipStyle(item.openNow)}>
-                                    🕒 {item.openNow === true ? "営業中" : item.openNow === false ? "閉店中" : "営業時間あり"}
-                                  </div>
-                                ) : null}
+                                {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
+                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
-                                {item.openingHoursText || item.openNow !== undefined ? (
-                                  <div style={{ ...infoLineStyle, alignItems: "flex-start" }}>
-                                    <span style={{ fontSize: "20px", flexShrink: 0 }}>🕒</span>
-                                    <span style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
-                                      {formatOpeningHours(item.openingHoursText) || (item.openNow ? "営業中" : "閉店中")}
-                                    </span>
-                                  </div>
-                                ) : null}
-                                {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>{travelIcon}</span><span>{iconToModeLabel(travelIcon)}{item.durationText || item.distanceText}</span></div> : null; })()}
-                                {item.hotpepperUrl ? (
-                                  <div style={infoLineStyle}><span style={{ fontSize: "20px" }}>🍽️</span><a href={item.hotpepperUrl} target="_blank" rel="noreferrer" style={{ color: "#e65100", fontWeight: 700, textDecoration: "underline" }}>ホットペッパーで見る</a></div>
-                                ) : null}
-                              </div>
+                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
-                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ height: "52px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                  <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
                                     Googleマップで見る
                                   </a>
                                 ) : null}
@@ -6707,154 +6628,38 @@ export default function Home() {
                                 <button
                                   onClick={() => toggleFavorite(item)}
                                   style={{ position: "absolute", top: "14px", right: "14px", width: "48px", height: "48px", borderRadius: "999px", border: "none", background: favorited ? "#ff8fa5" : "rgba(255,255,255,0.92)", color: favorited ? "#ffffff" : "#ff8fa5", fontSize: "24px", fontWeight: 900, cursor: "pointer", boxShadow: "0 10px 20px rgba(74,48,52,0.16)" }}
-                                  aria-label="お気に入り"
                                 >
                                   {favorited ? "♥" : "♡"}
                                 </button>
                                 <button
-                                  onClick={() => { if (window.confirm(`「${item.title}」を今後の結果から除外しますか？`)) blockPlace(item.title); }}
-                                  style={{ position: "absolute", top: "14px", left: "14px", height: "30px", padding: "0 10px", borderRadius: "999px", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", backdropFilter: "blur(4px)" }}
-                                  aria-label="結果から除外"
+                                  onClick={() => { setReportingSpot({ title: item.title, address: item.address ?? "" }); setReportReason(""); setReportNote(""); setReportDone(false); }}
+                                  style={{ position: "absolute", top: "14px", left: "14px", height: "30px", padding: "0 10px", borderRadius: "999px", border: "none", background: "rgba(220,38,38,0.82)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
                                 >
-                                  🚫 {lang === "en" ? "Hide" : "非表示"}
+                                  🚩 報告
                                 </button>
                                 {visited && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
                               </div>
 
                               <div className="result-card-body" style={{ padding: "20px 18px 18px" }}>
-                                {(() => {
-                                  const isEN = !!showEnglish[item.title];
-                                  const tr = (translatedCards[item.title] ?? {}) as Record<string, unknown>;
-                                  const displayTitle = isEN && tr.title ? String(tr.title) : item.title;
-                                  const displayVibe = isEN && tr.vibe ? String(tr.vibe) : (item.vibe ?? "");
-                                  const displayHours = formatOpeningHours(isEN && tr.openingHoursText ? String(tr.openingHoursText) : (item.openingHoursText ?? ""));
-                                  return (
-                                    <>
-                                      {/* タイトル + EN翻訳ボタン */}
-                                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
-                                        <div className="result-title" style={{ fontWeight: 900, fontSize: "34px", lineHeight: 1.15, letterSpacing: "-0.03em", flex: 1 }}>
-                                          {displayTitle}
-                                        </div>
-                                        <button
-                                          onClick={() => translateCard(item)}
-                                          style={{ flexShrink: 0, height: "32px", padding: "0 14px", borderRadius: "999px", border: showEnglish[item.title] ? "2px solid #4184ff" : "1.5px solid #d0bfc2", background: showEnglish[item.title] ? "#4184ff" : "#fff", color: showEnglish[item.title] ? "#fff" : "#7a5860", fontSize: "12px", fontWeight: 900, cursor: "pointer", letterSpacing: "0.06em", marginTop: "6px" }}
-                                          aria-label="英語に翻訳"
-                                        >
-                                          {translatingCards[item.title] ? "…" : showEnglish[item.title] ? "🌐 JP" : "🌐 EN"}
-                                        </button>
-                                      </div>
-
-                                      {/* 住所 */}
-                                      {item.address ? (
-                                        <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div>
-                                      ) : null}
-
-                                      {/* 概要 */}
-                                      {displayVibe ? (
-                                        <div style={{ fontSize: "15px", lineHeight: 1.7, marginBottom: "14px" }}>{displayVibe}</div>
-                                      ) : null}
-
-                                      {/* チップ行（レストランカードと統一） */}
-                                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
-                                        {(() => {
-                                          const label = priceLevelLabel(item.priceLevel);
-                                          return label ? (
-                                            <div style={{ ...chipStyle, background: "#fff8e1", color: "#6d4c00", border: "1px solid #ffe082" }}>💴 {label}</div>
-                                          ) : null;
-                                        })()}
-                                        {item.rating !== null && item.rating !== undefined ? (
-                                          <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div>
-                                        ) : null}
-                                        {item.openNow !== undefined || item.openingHoursText ? (
-                                          <div style={getOpeningChipStyle(item.openNow)}>
-                                            🕒 {item.openNow === true ? ((isEN || lang === "en") ? "Open now" : "営業中") : item.openNow === false ? ((isEN || lang === "en") ? "Closed" : "閉店中") : ((isEN || lang === "en") ? "Hours available" : "営業時間あり")}
-                                          </div>
-                                        ) : null}
-                                      </div>
-
-                                      {/* infoLine（レストランカードと同じ構造） */}
-                                      <div style={{ display: "grid", gap: "10px", marginBottom: "18px" }}>
-                                        {item.openingHoursText || item.openNow !== undefined ? (
-                                          <div style={{ ...infoLineStyle, alignItems: "flex-start" }}>
-                                            <span style={{ fontSize: "20px", flexShrink: 0 }}>🕒</span>
-                                            <span style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>{displayHours || (item.openNow ? ((isEN || lang === "en") ? "Open now" : "営業中") : ((isEN || lang === "en") ? "Closed" : "閉店中"))}</span>
-                                          </div>
-                                        ) : null}
-                                        {item.distanceText ? (
-                                          <div style={infoLineStyle}>
-                                            <span style={{ fontSize: "20px" }}>📍</span>
-                                            <span>{item.distanceText}</span>
-                                          </div>
-                                        ) : null}
-                                        {item.stationText ? (
-                                          <div style={infoLineStyle}>
-                                            <span style={{ fontSize: "20px" }}>🚉</span>
-                                            <span>{item.stationText}</span>
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </>
-                                  );
-                                })()}
-
-                                {/* Googleマップボタン */}
-                                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "12px" }}>
+                                <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
+                                {item.reason ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{item.reason}</div> : null}
+                                {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
+                                  {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
+                                  {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
+                                  {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
+                                </div>
+                                {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                   {item.mapUrl ? (
-                                    <a
-                                      href={item.mapUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      onClick={() => setMapClickedInSession((prev) => prev.includes(item.title) ? prev : [...prev, item.title])}
-                                      style={{ flex: 1, height: "52px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 22px rgba(42,111,230,0.2)", minWidth: "140px" }}
-                                    >
-                                      {lang === "en" ? "Open in Google Maps" : "Googleマップで見る"}
+                                    <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
+                                      Googleマップで見る
                                     </a>
                                   ) : null}
-                                  <button onClick={() => toggleVisited(item.title)} style={{ padding: "10px 16px", borderRadius: "999px", border: visitedPlaces.includes(item.title) ? "none" : "1.5px solid #d1d5db", background: visitedPlaces.includes(item.title) ? "#16a34a" : "transparent", color: visitedPlaces.includes(item.title) ? "#fff" : "#6b7280", fontSize: "13px", fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                    {visitedPlaces.includes(item.title) ? "✅ 行った！" : "🗺️ 行った！"}
+                                  <button onClick={() => toggleVisited(item.title)} style={{ padding: "10px 16px", borderRadius: "999px", border: visited ? "none" : "1.5px solid #d1d5db", background: visited ? "#16a34a" : "transparent", color: visited ? "#fff" : "#6b7280", fontSize: "13px", fontWeight: 900, cursor: "pointer" }}>
+                                    {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                   </button>
                                 </div>
-
-                                {/* 気分フィードバック */}
-                                {(() => {
-                                  const verdict = placeRatings[item.title];
-                                  if (verdict) {
-                                    return (
-                                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "16px", background: verdict === "good" ? "#e9f8ef" : "#fce4e4", border: `1px solid ${verdict === "good" ? "#bfe7cc" : "#f5c0c8"}`, fontSize: "13px", fontWeight: 800, color: verdict === "good" ? "#18794e" : "#c0385a" }}>
-                                        {verdict === "good" ? "👍 気になる！AIが覚えました" : "👎 興味なし。次回から除外します"}
-                                      </div>
-                                    );
-                                  }
-                                  return (
-                                    <div style={{ borderTop: "1px solid #f5e8eb", paddingTop: "12px" }}>
-                                      <div style={{ fontSize: "13px", fontWeight: 800, color: "#7a5860", marginBottom: "8px", textAlign: "center" }}>
-                                        {answers.mood ? `「${answers.mood}」の気分の時にこの場所は？` : "この気分の時にこの場所は？"}
-                                      </div>
-                                      <div style={{ display: "flex", gap: "8px" }}>
-                                        <button
-                                          onClick={() => submitPlaceRating(item.title, "good")}
-                                          style={{ flex: 1, height: "44px", borderRadius: "999px", border: "1.5px solid #bfe7cc", background: "#e9f8ef", color: "#18794e", fontSize: "16px", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                                        >
-                                          👍 この気分に合う
-                                        </button>
-                                        <button
-                                          onClick={() => submitPlaceRating(item.title, "bad")}
-                                          style={{ flex: 1, height: "44px", borderRadius: "999px", border: "1.5px solid #f5c0c8", background: "#fce4e4", color: "#c0385a", fontSize: "16px", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                                        >
-                                          👎 この気分には合わない
-                                        </button>
-                                      </div>
-                                      <div style={{ textAlign: "center", marginTop: "12px" }}>
-                                        <button
-                                          onClick={() => { setReportingSpot({ title: item.title, address: item.address ?? "" }); setReportReason(""); setReportNote(""); setReportDone(false); }}
-                                          style={{ background: "none", border: "none", color: "#b0a0a5", fontSize: "11px", cursor: "pointer", textDecoration: "underline", padding: "4px 8px" }}
-                                        >
-                                          ⚠ {lang === "en" ? "Report inappropriate" : "不適切を報告"}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
                               </div>
                             </div>
                           );
