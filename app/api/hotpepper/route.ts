@@ -174,7 +174,7 @@ const HOTPEPPER_GENRE_MAP: Array<{ matchKey: string; rule: GenreRule }> = [
     rule: {
       code: "G001",
       details: {
-        "大衆酒場": { keyword: "大衆酒場" },
+        "大衆酒場": {},                 // キーワードなし・居酒屋全般
         "個室あり": { private_room: true },
       },
     },
@@ -230,8 +230,8 @@ const HOTPEPPER_GENRE_MAP: Array<{ matchKey: string; rule: GenreRule }> = [
       code: "G008",
       details: {
         "焼肉食べ放題": { keyword: "食べ放題" },
-        "高級焼肉":     { keyword: "高級", private_room: true },
-        "単品メニューあり": {},   // ジャンルのみ・キーワードなし
+        "高級焼肉":     { keyword: "高級" },
+        "単品メニューあり": {},   // キーワードなし・焼肉全般
       },
     },
   },
