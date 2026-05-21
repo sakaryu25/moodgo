@@ -344,7 +344,19 @@ export async function POST(req: NextRequest) {
       originLat:     searchLat,
       originLng:     searchLng,
     };
-    const mapped = allPlaces.map(p => mapToPlaceResponse(p, googleKey, opts));
+    // ── 距離ハードフィルタ（生データ段階）────────────────────────────────
+    // locationBias は soft constraint のため、遠方の結果が混入することがある。
+    // Google Places 生データの location フィールドでフィルタする。
+    const maxDistKm = Math.min((radiusM / 1000) * 3, 80);
+    const geoFiltered = allPlaces.filter(p => {
+      const loc = p.location as Record<string, unknown> | undefined;
+      const pLat = typeof loc?.latitude  === "number" ? loc.latitude  as number : searchLat;
+      const pLng = typeof loc?.longitude === "number" ? loc.longitude as number : searchLng;
+      return haversineKm(searchLat, searchLng, pLat, pLng) <= maxDistKm;
+    });
+    console.log(`[nature] 距離フィルタ ${allPlaces.length}→${geoFiltered.length}件 (上限${maxDistKm}km)`);
+
+    const mapped = geoFiltered.map(p => mapToPlaceResponse(p, googleKey, opts));
 
     // ── 重複除去 → 最大20件 ──────────────────────────────────────────────
     let places = dedupByAddress(dedupByNamePrefix(dedup(mapped))).slice(0, 20);
