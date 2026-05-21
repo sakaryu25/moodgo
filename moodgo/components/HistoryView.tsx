@@ -18,6 +18,7 @@ type Props = {
   onClearHistory: () => void;
   favorites: FavoriteItem[];
   onToggleFavorite: (rec: Recommendation) => void;
+  onResearch?: (item: HistoryItem) => void;
   lang?: 'ja' | 'en';
 };
 
@@ -29,6 +30,7 @@ const T = {
     clear: 'クリア',
     empty: 'まだ履歴はありません\n気分から場所を探してみましょう！',
     recCount: (n: number) => `${n}件のおすすめ`,
+    reSearch: '再検索',
     noRecs: '詳細なし',
     today: '今日',
     withLabel: '同伴', transportLabel: '交通', budgetLabel: '予算', timeLabel: '時間',
@@ -41,6 +43,7 @@ const T = {
     clear: 'Clear',
     empty: 'No history yet\nLet\'s find a place by mood!',
     recCount: (n: number) => `${n} spots`,
+    reSearch: 'Re-search',
     noRecs: 'No detail',
     today: 'Today',
     withLabel: 'With', transportLabel: 'Transport', budgetLabel: 'Budget', timeLabel: 'Time',
@@ -64,7 +67,7 @@ function formatDate(dateStr: string | undefined, lang: 'ja' | 'en'): string {
 
 export default function HistoryView({
   history, selectedHistoryItem, onSelectHistoryItem, onClearHistory,
-  favorites, onToggleFavorite, lang = 'ja',
+  favorites, onToggleFavorite, onResearch, lang = 'ja',
 }: Props) {
   const insets = useSafeAreaInsets();
   const isFav = (title: string) => favorites.some((f) => f.title === title);
@@ -124,9 +127,16 @@ export default function HistoryView({
               </View>
             ) : null}
           </View>
-          {recCount > 0 && (
-            <Text style={s.recCountText}>{t.recCount(recCount)}</Text>
-          )}
+          <View style={s.summaryFooter}>
+            {recCount > 0 && (
+              <Text style={s.recCountText}>{t.recCount(recCount)}</Text>
+            )}
+            {item.savedAnswers?.mood && onResearch && (
+              <TouchableOpacity onPress={() => onResearch(item)} style={s.reSearchBtn} activeOpacity={0.8}>
+                <Text style={s.reSearchText}>{t.reSearch}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {item.recommendations && item.recommendations.length > 0
@@ -273,4 +283,10 @@ const s = StyleSheet.create({
   metaChipLabel: { fontSize: 11, color: '#8E8E93', fontWeight: '500' },
   metaChipValue: { fontSize: 12, color: '#3C3C43', fontWeight: '600' },
   recCountText: { fontSize: 13, color: '#007AFF', fontWeight: '600' },
+  summaryFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reSearchBtn: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: '#FF6B3515', borderWidth: 1, borderColor: '#FF6B35',
+  },
+  reSearchText: { fontSize: 14, fontWeight: '600', color: '#FF6B35' },
 });

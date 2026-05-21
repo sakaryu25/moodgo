@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search } from 'lucide-react-native';
+import { ChevronLeft, Search, Shuffle } from 'lucide-react-native';
 import type { Recommendation, FavoriteItem } from '@/types/app';
 import type { PlaceResponse } from '@/types/onsen';
 import PlaceCard from './PlaceCard';
@@ -120,6 +120,14 @@ type Props = {
   cafeSubCategoryLabel: string;
   waiWaiFacilities: PlaceResponse[] | null;
   waiWaiSubCategoryLabel: string;
+  driveFacilities: PlaceResponse[] | null;
+  driveSubCategoryLabel: string;
+  focusFacilities: PlaceResponse[] | null;
+  focusSubCategoryLabel: string;
+  sportsFacilities: PlaceResponse[] | null;
+  sportsSubCategoryLabel: string;
+  travelFacilities: PlaceResponse[] | null;
+  travelSubCategoryLabel: string;
   isLoading: boolean;
   loadingMessage: string;
   apiWarning: string;
@@ -153,6 +161,10 @@ type Props = {
   reportDone: boolean;
   onSubmitReport: () => void;
   onSubmitVisitedFeedback?: (title: string, rating: number) => void;
+  onShuffle?: () => void;
+  prefectureButtons?: string[];
+  selectedPrefecture?: string;
+  onSelectPrefecture?: (v: string) => void;
   seenPlaceTitles?: string[];
   lang?: 'ja' | 'en';
 };
@@ -163,6 +175,10 @@ export default function ResultsView(props: Props) {
     recommendations, onsenFacilities, onsenCategoryLabel,
     natureFacilities, natureSubGenreLabel, cafeFacilities, cafeSubCategoryLabel,
     waiWaiFacilities, waiWaiSubCategoryLabel,
+    driveFacilities, driveSubCategoryLabel,
+    focusFacilities, focusSubCategoryLabel,
+    sportsFacilities, sportsSubCategoryLabel,
+    travelFacilities, travelSubCategoryLabel,
     isLoading, loadingMessage, apiWarning,
     favorites, onToggleFavorite, blockedPlaces, onBlockPlace,
     feedbackRating, feedbackSubmitted, onSubmitFeedback,
@@ -170,7 +186,9 @@ export default function ResultsView(props: Props) {
     onReset, onSetReportingSpot, reportingSpot,
     reportReason, onSetReportReason, reportNote, onSetReportNote,
     reportSubmitting, reportDone, onSubmitReport,
-    onSubmitVisitedFeedback, seenPlaceTitles = [],
+    onSubmitVisitedFeedback, onShuffle,
+    prefectureButtons = [], selectedPrefecture = '', onSelectPrefecture,
+    seenPlaceTitles = [],
     lang = 'ja',
   } = props;
   const t = T[lang];
@@ -191,13 +209,22 @@ export default function ResultsView(props: Props) {
 
   // Determine what to show
   const facilityList: PlaceResponse[] | null =
+    driveFacilities ?? focusFacilities ?? sportsFacilities ?? travelFacilities ??
     waiWaiFacilities ?? cafeFacilities ?? onsenFacilities ?? natureFacilities ?? null;
   const facilityLabel =
+    driveFacilities ? driveSubCategoryLabel :
+    focusFacilities ? focusSubCategoryLabel :
+    sportsFacilities ? sportsSubCategoryLabel :
+    travelFacilities ? travelSubCategoryLabel :
     waiWaiFacilities ? waiWaiSubCategoryLabel :
     cafeFacilities ? cafeSubCategoryLabel :
     onsenFacilities ? onsenCategoryLabel :
     natureFacilities ? natureSubGenreLabel : '';
   const accentColor =
+    driveFacilities ? '#FF9500' :
+    focusFacilities ? '#5856D6' :
+    sportsFacilities ? '#32ADE6' :
+    travelFacilities ? '#007AFF' :
     waiWaiFacilities ? '#ff4da6' :
     cafeFacilities ? '#a96032' :
     onsenFacilities ? '#1565c0' :
@@ -223,6 +250,7 @@ export default function ResultsView(props: Props) {
         .map((f) => placeToRec(f, facilityLabel))
     : recommendations.filter((r) => !blockedPlaces.includes(r.title));
 
+  if (selectedPrefecture) facilityItems = facilityItems.filter((i) => i.address?.includes(selectedPrefecture));
   if (openNowOnly) facilityItems = facilityItems.filter((i) => i.openNow === true);
   if (unseenOnly) facilityItems = facilityItems.filter((i) => !seenPlaceTitles.includes(i.title));
   if (resultSort === 'rating') facilityItems = [...facilityItems].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -245,7 +273,13 @@ export default function ResultsView(props: Props) {
               <Text style={s.navCount}>{facilityItems.length}{lang === 'ja' ? '件' : ' spots'}</Text>
             )}
           </View>
-          <View style={s.navRight} />
+          <View style={s.navRight}>
+            {onShuffle && !isLoading && (
+              <TouchableOpacity onPress={onShuffle} style={s.shuffleBtn} activeOpacity={0.6} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Shuffle size={20} color="#FF6B35" strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -296,6 +330,38 @@ export default function ResultsView(props: Props) {
               )}
             </View>
           </View>
+        )}
+
+        {/* Prefecture filter */}
+        {!isLoading && prefectureButtons.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.prefRow}
+            contentContainerStyle={s.prefRowContent}
+          >
+            {selectedPrefecture ? (
+              <TouchableOpacity
+                onPress={() => onSelectPrefecture?.('')}
+                style={[s.prefChip, s.prefChipClear]}
+                activeOpacity={0.7}
+              >
+                <Text style={s.prefChipClearText}>✕ 解除</Text>
+              </TouchableOpacity>
+            ) : null}
+            {prefectureButtons.map((pref) => (
+              <TouchableOpacity
+                key={pref}
+                onPress={() => onSelectPrefecture?.(selectedPrefecture === pref ? '' : pref)}
+                style={[s.prefChip, selectedPrefecture === pref && s.prefChipActive]}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.prefChipText, selectedPrefecture === pref && s.prefChipTextActive]}>
+                  {pref}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         )}
 
         {/* Loading */}
@@ -522,7 +588,8 @@ const s = StyleSheet.create({
   navCenter: { flex: 1, alignItems: 'center' },
   navTitle: { fontSize: 17, fontWeight: '600', color: '#000', textAlign: 'center' },
   navCount: { fontSize: 11, color: '#8E8E93', fontWeight: '500', marginTop: 1 },
-  navRight: { minWidth: 72 },
+  navRight: { minWidth: 72, alignItems: 'flex-end' },
+  shuffleBtn: { padding: 6 },
 
   scroll: { flex: 1 },
   content: { padding: 16 },
@@ -556,6 +623,18 @@ const s = StyleSheet.create({
   filterBtnText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
   filterBtnTextActive: { color: '#34C759', fontWeight: '600' },
   visitModalSub: { fontSize: 13, color: '#8E8E93', marginBottom: 16, textAlign: 'center' },
+
+  prefRow: { marginBottom: 10 },
+  prefRowContent: { paddingHorizontal: 0, gap: 8, flexDirection: 'row' },
+  prefChip: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
+    backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  prefChipActive: { backgroundColor: '#FF6B3515', borderColor: '#FF6B35' },
+  prefChipText: { fontSize: 12, fontWeight: '500', color: '#6D6D72' },
+  prefChipTextActive: { color: '#FF6B35', fontWeight: '700' },
+  prefChipClear: { backgroundColor: '#F2F2F7', borderColor: '#C7C7CC' },
+  prefChipClearText: { fontSize: 12, fontWeight: '500', color: '#8E8E93' },
 
   loadingBox: { alignItems: 'center', paddingVertical: 60, gap: 16 },
   loadingText: { fontSize: 15, color: '#6D6D72', textAlign: 'center', lineHeight: 22 },
