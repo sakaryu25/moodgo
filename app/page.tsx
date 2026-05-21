@@ -5435,6 +5435,111 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* ── 今回の条件サマリー ── */}
+                {(() => {
+                  type Chip = { label: string; value: string; skipped: boolean };
+                  const chips: Chip[] = [];
+
+                  // 1. 気分
+                  chips.push({ label: "気分", value: selectedMood, skipped: false });
+
+                  // 2. 誰と
+                  chips.push({ label: "誰と", value: selectedCompanion || "スキップ", skipped: !selectedCompanion });
+
+                  // 3. 交通手段
+                  const transportVal = selectedTransports.join("・");
+                  chips.push({ label: "交通手段", value: transportVal || "スキップ", skipped: !transportVal });
+
+                  // 4. 予算
+                  let budgetLabel = "スキップ"; let budgetSkipped = true;
+                  if (budget !== undefined) {
+                    budgetSkipped = false;
+                    if (budget === 0) budgetLabel = "無料";
+                    else if (budgetMin > 0) budgetLabel = `¥${budgetMin.toLocaleString("ja-JP")}〜¥${budget.toLocaleString("ja-JP")}`;
+                    else budgetLabel = `〜¥${budget.toLocaleString("ja-JP")}`;
+                  }
+                  chips.push({ label: "予算", value: budgetLabel, skipped: budgetSkipped });
+
+                  // 5. 時間 / 距離感
+                  if (selectedMood === "お腹すいた") {
+                    const fd = dynamicAnswers["food_distance"] ?? "";
+                    // 表示用に短縮
+                    const fdShort = fd.replace(/（.*?）/g, "").trim();
+                    chips.push({ label: "距離感", value: fdShort || "スキップ", skipped: !fd });
+                  } else {
+                    chips.push({ label: "時間", value: selectedTime || "スキップ", skipped: !selectedTime });
+                  }
+
+                  // 6. dynamicQuestions の回答（ジャンル別質問）
+                  const keyLabel: Record<string, string> = {
+                    food_genre_new: "ジャンル",
+                    relax_place: "場所",
+                    drive_distance: "距離",
+                    instgram_place: "映えスポット",
+                    instgram_vibe: "雰囲気",
+                    instgram_style: "スタイル",
+                  };
+                  dynamicQuestions.forEach(dq => {
+                    const ans = dynamicAnswers[dq.key] ?? "";
+                    const label = keyLabel[dq.key] ?? dq.question.replace(/[？?。].*$/, "").slice(0, 12);
+                    chips.push({ label, value: ans || "スキップ", skipped: !ans });
+                  });
+
+                  // 7. 深掘り / サブカテゴリ（気分別）
+                  if (selectedMood === "お腹すいた" && dynamicAnswers["food_genre_new"]) {
+                    const gAns = dynamicAnswers["food_genre_new"];
+                    const hasSub = Object.keys(FOOD_SUB_QUESTIONS_MAP).some(k => gAns.includes(k));
+                    if (hasSub) {
+                      const subAns = dynamicAnswers["food_sub_choice"] ?? "";
+                      chips.push({ label: "こだわり", value: subAns || "スキップ", skipped: !subAns });
+                    }
+                  }
+                  if (selectedMood === "まったりしたい") {
+                    if ((dynamicAnswers["relax_place"] ?? "").includes("温泉") && onsenCategoryLabel)
+                      chips.push({ label: "温泉タイプ", value: onsenCategoryLabel, skipped: false });
+                    else if ((dynamicAnswers["relax_place"] ?? "").includes("カフェ") && cafeSubCategoryLabel)
+                      chips.push({ label: "カフェタイプ", value: cafeSubCategoryLabel, skipped: false });
+                    else if (dynamicAnswers["relax_sub_choice"])
+                      chips.push({ label: "こだわり", value: dynamicAnswers["relax_sub_choice"], skipped: false });
+                  }
+                  if (selectedMood === "自然感じたい" && natureSubGenreLabel)
+                    chips.push({ label: "自然タイプ", value: natureSubGenreLabel, skipped: false });
+                  if (selectedMood === "わいわい楽しみたい")
+                    chips.push({ label: "遊び方", value: waiWaiSubCategoryLabel || "スキップ", skipped: !waiWaiSubCategoryLabel });
+                  if (selectedMood === "ドライブしたい")
+                    chips.push({ label: "コース", value: driveSubCategoryLabel || "スキップ", skipped: !driveSubCategoryLabel });
+                  if (selectedMood === "集中したい")
+                    chips.push({ label: "場所タイプ", value: focusSubCategoryLabel || "スキップ", skipped: !focusSubCategoryLabel });
+                  if (selectedMood === "体を動かしたい")
+                    chips.push({ label: "スポーツ", value: sportsSubCategoryLabel || "スキップ", skipped: !sportsSubCategoryLabel });
+                  if (selectedMood === "遠くに行きたい")
+                    chips.push({ label: "お出かけ先", value: travelSubCategoryLabel || "スキップ", skipped: !travelSubCategoryLabel });
+
+                  // 8. 自由ワード
+                  if (freeWord)
+                    chips.push({ label: "キーワード", value: freeWord, skipped: false });
+
+                  return (
+                    <div style={{ marginBottom: "16px", padding: "12px 14px", background: "#f5f3ff", borderRadius: "16px", border: "1px solid #ddd6fe" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 800, color: "#7c3aed", marginBottom: "8px", letterSpacing: "0.04em" }}>🗒️ 今回の条件</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {chips.map(({ label, value, skipped }) => (
+                          <span key={label} style={{
+                            display: "inline-flex", alignItems: "center", gap: "3px",
+                            padding: "4px 10px", borderRadius: "999px", fontSize: "12px",
+                            background: skipped ? "#f3f4f6" : "#ede9fe",
+                            color: skipped ? "#9ca3af" : "#5b21b6",
+                            border: skipped ? "1px solid #e5e7eb" : "1px solid #ddd6fe",
+                          }}>
+                            <span style={{ opacity: 0.65, fontSize: "11px", fontWeight: 600 }}>{label}：</span>
+                            <span style={{ fontWeight: 800 }}>{value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* ── 都道府県フィルターボタン ── */}
                 {prefectureButtons.length > 0 && (lastSearchParams || travelFacilities) && !randomFacilities && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", padding: "4px 0 16px" }}>
