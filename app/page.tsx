@@ -144,6 +144,65 @@ function proxyPhoto(url?: string): string {
   return url;
 }
 
+/**
+ * 営業時間テキストを見やすく整形する
+ * 入力例: "月曜日: 10時00分～16時00分\n火曜日: 10時00分～16時00分\n..."
+ * 出力例: ["毎日  10:00～16:00"]
+ *      or ["月〜金  10:00～22:00", "土・日  10:00～18:00"]
+ */
+function formatHoursText(raw: string): string[] {
+  if (!raw) return [];
+
+  // 時分 → "H:MM" に変換
+  const simpTime = (s: string) =>
+    s.replace(/(\d+)時(\d+)分/g, (_, h, m) => `${h}:${m.padStart(2, "0")}`)
+     .replace(/(\d+)時(?!\d)/g, (_, h) => `${h}:00`);
+
+  const DAY_LONG: Record<string, number> = {
+    "月曜日": 0, "火曜日": 1, "水曜日": 2, "木曜日": 3,
+    "金曜日": 4, "土曜日": 5, "日曜日": 6,
+    "月": 0, "火": 1, "水": 2, "木": 3, "金": 4, "土": 5, "日": 6,
+  };
+  const DAY_SHORT = ["月", "火", "水", "木", "金", "土", "日"];
+
+  const rawLines = raw.split(/\n|\\n/).map(l => l.trim()).filter(Boolean);
+
+  // 各行を { dayIdx, hours } にパース
+  const parsed: { dayIdx: number; hours: string }[] = [];
+  for (const line of rawLines) {
+    const colonIdx = line.indexOf(":");
+    if (colonIdx < 0) { return rawLines.map(simpTime); }
+    const dayRaw = line.slice(0, colonIdx).trim();
+    const hoursRaw = simpTime(line.slice(colonIdx + 1).trim());
+    const dayIdx = DAY_LONG[dayRaw] ?? -1;
+    if (dayIdx < 0) { return rawLines.map(simpTime); }
+    parsed.push({ dayIdx, hours: hoursRaw });
+  }
+
+  // 連続する同じ時間を グループ化
+  const sorted = [...parsed].sort((a, b) => a.dayIdx - b.dayIdx);
+  const groups: { start: number; end: number; hours: string }[] = [];
+  for (const p of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && last.hours === p.hours && p.dayIdx === last.end + 1) {
+      last.end = p.dayIdx;
+    } else {
+      groups.push({ start: p.dayIdx, end: p.dayIdx, hours: p.hours });
+    }
+  }
+
+  return groups.map(g => {
+    const s = DAY_SHORT[g.start] ?? "";
+    const e = DAY_SHORT[g.end] ?? "";
+    let dayStr: string;
+    if (g.start === 0 && g.end === 6) dayStr = "毎日";
+    else if (g.start === g.end) dayStr = s;
+    else if (g.end - g.start === 1) dayStr = `${s}・${e}`;
+    else dayStr = `${s}〜${e}`;
+    return `${dayStr}  ${g.hours}`;
+  });
+}
+
 export default function Home() {
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(1);
@@ -5705,11 +5764,12 @@ export default function Home() {
                                   <div style={{ fontWeight: 900, fontSize: "28px", lineHeight: 1.2, letterSpacing: "-0.03em", marginBottom: "10px" }}>{item.title}</div>
                                   {item.address ? <div style={{ fontSize: "14px", opacity: 0.76, marginBottom: "12px" }}>{item.address}</div> : null}
                                   {item.reason ? <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "12px", color: "#555" }}>{item.reason}</div> : null}
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
                                     {item.rating !== null && item.rating !== undefined ? <div style={chipStyle}>⭐ {item.rating}{item.userRatingCount ? ` (${item.userRatingCount})` : ""}</div> : null}
                                     {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
-                                    {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                                   </div>
+                                  {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
+                                  {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{chip}</div> : null; })()}
                                   <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                     {item.mapUrl && (
                                       <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -5917,7 +5977,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
                                   <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6012,7 +6072,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
                                   <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6127,7 +6187,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl && (
                                   <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6223,7 +6283,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
                                   <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6318,7 +6378,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
                                   <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6413,7 +6473,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
                                   <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6511,7 +6571,7 @@ export default function Home() {
                                 {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                 {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                               </div>
-                              {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                              {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                               <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 {item.mapUrl ? (
                                   <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
@@ -6649,7 +6709,7 @@ export default function Home() {
                                   {item.openNow != null ? <div style={{ ...chipStyle, background: item.openNow ? "#f0fdf4" : "#fef2f2", color: item.openNow ? "#16a34a" : "#dc2626", border: `1px solid ${item.openNow ? "#bbf7d0" : "#fecaca"}` }}>{item.openNow ? "🟢 営業中" : "🔴 営業時間外"}</div> : null}
                                   {(() => { const chip = buildTravelChip(travelIcon, item.durationText ?? "", item.distanceText ?? ""); return chip ? <div style={chipStyle}>{chip}</div> : null; })()}
                                 </div>
-                                {item.openingHoursText ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>🕒 {item.openingHoursText}</div> : null}
+                                {item.openingHoursText ? (() => { const hrs = formatHoursText(item.openingHoursText!); return hrs.length > 0 ? <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>{hrs.map((line, i) => <div key={i} style={{ display: "flex", gap: "5px", alignItems: "baseline" }}><span style={{ opacity: i === 0 ? 1 : 0, minWidth: "16px", fontSize: "12px" }}>🕒</span><span>{line}</span></div>)}</div> : null; })() : null}
                                 <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                   {item.mapUrl ? (
                                     <a href={item.mapUrl} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "52px", padding: "0 20px", borderRadius: "999px", background: "linear-gradient(135deg, #4184ff 0%, #2a6fe6 100%)", color: "#fff", fontSize: "15px", fontWeight: 900, textDecoration: "none", boxShadow: "0 10px 22px rgba(42,111,230,0.2)" }}>
