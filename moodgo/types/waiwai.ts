@@ -1,4 +1,4 @@
-export type WaiWaiSubCategory = "active" | "party" | "experience" | "food_drink";
+export type WaiWaiSubCategory = "active" | "party" | "experience";
 
 export interface WaiWaiRequest {
   subCategory: WaiWaiSubCategory;

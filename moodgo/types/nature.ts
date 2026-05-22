@@ -1,4 +1,4 @@
-export type NatureSubGenre = "sea" | "forest" | "park" | "panorama";
+export type NatureSubGenre = "ocean" | "forest" | "park" | "view";
 export type NatureDistancePref = "近場" | "ほどほど" | "遠く";
 
 export interface NatureRequest {

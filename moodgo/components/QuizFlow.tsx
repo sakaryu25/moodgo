@@ -108,6 +108,7 @@ const MOOD_QUESTIONS: Record<string, DynamicQuestion[]> = {
       '居酒屋🍺', '和食🍣', '洋食🍳', 'イタリアン🍝',
       '中華🥟', '焼肉🥩', '韓国🌶️', 'アジア系統🍛',
       '各国料理🌍', 'ラーメン🍜', 'お好み焼き・もんじゃ🥞', 'カフェ・スイーツ☕',
+      '高層ビル料理🏙️',
     ]},
   ],
   'まったりしたい': [
@@ -182,18 +183,16 @@ const ATMOSPHERE_OPTIONS = ['静か', '賑やか', 'アクティブ', 'スリル
 const PRIORITY_OPTIONS = ['コスパ', '映え', '距離', '快適さ', '楽しさ', '質の高さ'];
 
 const ONSEN_CATEGORIES = [
-  { key: 'natural_onsen' as OnsenCategory, label: '天然温泉・日帰り温泉', sub: '源泉かけ流し・日帰り入浴', emoji: '♨️' },
-  { key: 'sento' as OnsenCategory, label: '銭湯', sub: '昔ながらの公衆浴場', emoji: '🛁' },
-  { key: 'super_sento' as OnsenCategory, label: 'スーパー銭湯・健康ランド', sub: '岩盤浴・休憩・食事も', emoji: '🏊' },
-  { key: 'sauna_ganban' as OnsenCategory, label: 'サウナ・岩盤浴', sub: 'ととのい・デトックス', emoji: '🔥' },
-  { key: 'all_onsen' as OnsenCategory, label: '温泉施設全般', sub: 'とにかく近くの温浴施設を探す', emoji: '🌊' },
+  { key: 'natural_onsen' as OnsenCategory, label: '天然温泉・日帰り温泉', sub: '源泉かけ流し・露天風呂', emoji: '♨️' },
+  { key: 'super_sento' as OnsenCategory, label: 'スーパー銭湯・健康ランド', sub: '岩盤浴・休憩・食事も', emoji: '🛁' },
+  { key: 'sauna_ganban' as OnsenCategory, label: 'サウナ・岩盤浴', sub: 'ととのい・デトックス', emoji: '🧖' },
 ];
 
 const NATURE_SUBGENRES = [
-  { key: 'sea' as NatureSubGenre, label: '波の音と海風', sub: '海岸・海浜公園・ビーチ', emoji: '🌊' },
-  { key: 'forest' as NatureSubGenre, label: '森の中で深呼吸', sub: '森林浴・自然公園・散策路', emoji: '🌳' },
-  { key: 'park' as NatureSubGenre, label: '広い芝生でゴロゴロ', sub: '大型公園・芝生広場・ピクニック', emoji: '🧺' },
-  { key: 'panorama' as NatureSubGenre, label: '圧倒的な絶景', sub: '展望台・絶景スポット・高台', emoji: '⛰️' },
+  { key: 'ocean' as NatureSubGenre, label: '波の音と海風', sub: '波・磯の香り・海辺', emoji: '🌊' },
+  { key: 'forest' as NatureSubGenre, label: '森の中で深呼吸', sub: '森林・自然公園', emoji: '🌳' },
+  { key: 'park' as NatureSubGenre, label: '広い芝生でゴロゴロ', sub: '大型公園・芝生広場', emoji: '🧺' },
+  { key: 'view' as NatureSubGenre, label: '圧倒的な絶景', sub: '展望台・絶景スポット', emoji: '🌅' },
 ];
 
 const NATURE_DISTANCES: NatureDistancePref[] = ['近場', 'ほどほど', '遠く'];
@@ -225,22 +224,20 @@ const CAFE_DISTANCE_OPTIONS = [
 ];
 
 const WAIWAI_SUBCATEGORIES = [
-  { key: 'active' as WaiWaiSubCategory, label: '体を動かして遊びたい', sub: 'ボウリング・トランポリン・スポッチャ', emoji: '💪' },
+  { key: 'active' as WaiWaiSubCategory, label: '体を動かしてはしゃぎたい', sub: 'ボウリング・トランポリン・スポッチャ', emoji: '💪' },
   { key: 'party' as WaiWaiSubCategory, label: '歌って飲んで騒ぎたい', sub: 'カラオケ・ダーツ・ビリヤード', emoji: '🎤' },
   { key: 'experience' as WaiWaiSubCategory, label: '非日常の体験で盛り上がりたい', sub: 'ボードゲームカフェ・脱出ゲーム', emoji: '🎲' },
-  { key: 'food_drink' as WaiWaiSubCategory, label: '美味しいご飯とお酒でわいわい', sub: '居酒屋・焼肉・食べ放題・飲み放題', emoji: '🍻' },
 ];
 
 const FOOD_SUB_QUESTIONS_MAP: Record<string, { question: string; options: string[] }> = {
-  '居酒屋🍺': { question: 'どんな居酒屋？', options: ['海鮮・魚介系🐟', '焼き鳥・串焼き🍡', 'もつ・ホルモン系🔥', '創作料理・おしゃれ系✨', 'なんでもOK'] },
-  '和食🍣': { question: 'どんな和食？', options: ['寿司・海鮮🍣', 'そば・うどん🍜', '天ぷら・揚げ物🍤', '定食・家庭的🍱', 'なんでもOK'] },
-  '洋食🍳': { question: 'どんな洋食？', options: ['ハンバーグ・ステーキ🥩', 'パスタ・ピザ🍝', 'カフェ飯・ランチ🥗', 'ハンバーガー🍔', 'なんでもOK'] },
-  'イタリアン🍝': { question: 'どんなイタリアン？', options: ['本格ピザ🍕', 'パスタ中心🍝', 'トラットリア（家庭的）🏠', 'リストランテ（高級）✨', 'なんでもOK'] },
-  '焼肉🥩': { question: 'どんな焼肉？', options: ['高級和牛🥩', 'コスパ重視💰', 'ホルモン系🔥', '1人焼肉🙋', 'なんでもOK'] },
-  'アジア系統🍛': { question: 'どのアジア料理？', options: ['タイ料理🍛', 'ベトナム料理🍜', 'インド料理🍲', '中東・トルコ料理🌯', 'なんでもOK'] },
-  '各国料理🌍': { question: 'どの国の料理？', options: ['メキシコ・スペイン🌮', 'フレンチ・欧州🥐', 'アフリカ・中東🌍', '珍しい国の料理🗺️', 'なんでもOK'] },
-  'ラーメン🍜': { question: 'どんなラーメン？', options: ['醤油・塩🍜', '豚骨🐖', '味噌🌾', 'つけ麺・まぜそば🍣', 'なんでもOK'] },
-  'カフェ・スイーツ☕': { question: 'どんなスイーツ？', options: ['パンケーキ・ワッフル🥞', 'ケーキ・パティスリー🎂', 'チョコレート系🍫', '和スイーツ・あんこ🍡', 'なんでもOK'] },
+  '居酒屋🍺': { question: 'お店の雰囲気やメインとなる条件を教えてください', options: ['大衆酒場🍻', '個室あり🔒'] },
+  '和食🍣': { question: '本日の和食、どのようなお食事がご希望ですか？', options: ['海鮮・お寿司🍣', '天ぷら・揚げ物🍤', 'うどん・そば🍜', '割烹・懐石料理🎋'] },
+  '洋食🍳': { question: 'メインで食べたい洋食のメニューはどれですか？', options: ['ハンバーグ🍔', 'オムライス🍳', 'ステーキ・肉料理🥩', 'レトロな洋食屋さん🍽️'] },
+  '焼肉🥩': { question: '今日のお肉、予算や食べ方の希望を教えてください', options: ['焼肉食べ放題🍽️', '高級焼肉（黒毛和牛）🥩', '単品メニューあり🍖'] },
+  'アジア系統🍛': { question: 'どこの地域の料理やスパイスを楽しみたいですか？', options: ['インドネパール料理🍛', 'タイ料理🌿', 'ベトナム料理・フォー🍜', 'アジアンエスニック全般🌏'] },
+  '各国料理🌍': { question: '体験してみたい世界の食文化はどれですか？', options: ['メキシコ料理・タコス🌮', 'ブラジル料理・シュラスコ🥩', 'ロシア料理🥣', '他国料理🌍'] },
+  'ラーメン🍜': { question: '今日はどんな味のスープの気分ですか？', options: ['こってりラーメン（豚骨・家系）🍜', 'あっさりラーメン（醤油・塩）🍜', '味噌ラーメン🍜', 'つけ麺・まぜそば🍝'] },
+  'カフェ・スイーツ☕': { question: 'どんなカフェを探していますか？', options: ['スイーツカフェ（パンケーキ・ケーキ）🍰', '喫茶店・レトロカフェ☕', '流行りカフェ（インスタ映え）📸'] },
 };
 
 const DRIVE_SUBCATEGORIES = [
@@ -251,10 +248,8 @@ const DRIVE_SUBCATEGORIES = [
 ];
 
 const FOCUS_SUBCATEGORIES = [
-  { key: 'work_cafe', label: 'カフェで作業・勉強したい', sub: 'Wi-Fi・電源完備・落ち着いた雰囲気', emoji: '☕' },
-  { key: 'coworking', label: '静かな専用スペースで集中したい', sub: 'コワーキング・自習室・ドロップイン', emoji: '🖥️' },
-  { key: 'family_restaurant', label: '時間を気にせず深夜まで粘りたい', sub: 'ファミレス・ドリンクバー・24時間営業', emoji: '🍳' },
-  { key: 'netcafe_library', label: '漫画・本に囲まれて完全にこもりたい', sub: 'ネットカフェ・マンガ喫茶・図書館', emoji: '📚' },
+  { key: 'work_cafe', label: 'カフェ・ファミレスで作業・勉強したい', sub: 'Wi-Fi・電源完備・ドリンクバー・深夜営業', emoji: '☕' },
+  { key: 'coworking', label: '静かな場所でとにかくこもりたい', sub: 'コワーキング・ネカフェ・マンガ喫茶・図書館', emoji: '🖥️' },
 ];
 
 const SPORTS_SUBCATEGORIES = [
@@ -776,6 +771,7 @@ export default function QuizFlow(props: Props) {
                     const pool = MOOD_QUESTIONS[m.key] ?? [];
                     onSetDynamicQuestions(pool);
                     onSetDynamicAnswers({});
+                    onSetStep(2);
                   }}
                   activeOpacity={0.7}
                   style={[s.moodBtn, active && s.moodBtnActive]}
@@ -847,80 +843,39 @@ export default function QuizFlow(props: Props) {
       );
     }
 
-    // Step 4: Budget
+    // Step 4: Budget (chip only)
     if (step === 4) {
       const budgetChips = lang === 'en'
         ? [
-            { label: 'Undecided', min: 0, max: undefined as number | undefined },
-            { label: 'Free', min: 0, max: 0 },
-            { label: '〜¥3,000', min: 0, max: 3000 },
-            { label: '〜¥5,000', min: 0, max: 5000 },
-            { label: '〜¥10,000', min: 0, max: 10000 },
-            { label: '¥10,000+', min: 10000, max: 50000 },
+            { label: 'Free only', max: 0 },
+            { label: '〜¥1,000', max: 1000 },
+            { label: '〜¥3,000', max: 3000 },
+            { label: '〜¥5,000', max: 5000 },
+            { label: '〜¥10,000', max: 10000 },
+            { label: 'No limit', max: undefined as number | undefined },
           ]
         : [
-            { label: '未定', min: 0, max: undefined as number | undefined },
-            { label: '無料', min: 0, max: 0 },
-            { label: '〜¥3,000', min: 0, max: 3000 },
-            { label: '〜¥5,000', min: 0, max: 5000 },
-            { label: '〜¥10,000', min: 0, max: 10000 },
-            { label: '¥10,000〜', min: 10000, max: 50000 },
+            { label: '0円（無料のみ）', max: 0 },
+            { label: '〜1,000円', max: 1000 },
+            { label: '〜3,000円', max: 3000 },
+            { label: '〜5,000円', max: 5000 },
+            { label: '〜10,000円', max: 10000 },
+            { label: '制限なし', max: undefined as number | undefined },
           ];
-      const budgetDisplay =
-        budget === undefined ? (lang === 'en' ? 'Undecided' : '未定') :
-        budget === 0 && budgetMin === 0 ? t.free :
-        budgetMin > 0 ? `¥${budgetMin.toLocaleString('ja-JP')} 〜 ¥${budget.toLocaleString('ja-JP')}` :
-        `〜¥${budget.toLocaleString('ja-JP')}`;
       return (
         <>
           <Text style={s.stepTitle}>{t.step4Title}</Text>
           <Text style={s.stepSub}>{t.step4Sub}</Text>
-          <View style={s.budgetBox}>
-            <Text style={s.budgetValue}>{budgetDisplay}</Text>
-            <Text style={s.budgetRangeLabel}>{lang === 'en' ? 'Min' : '下限'}</Text>
-            <Slider
-              style={{ width: '100%', height: 36 }}
-              minimumValue={0} maximumValue={50000} step={500}
-              value={budgetMin}
-              onValueChange={(v) => {
-                const min = Math.round(v);
-                onSetBudgetMin(min);
-                if (budget !== undefined && min > budget) onSetBudget(min);
-              }}
-              minimumTrackTintColor="#ff8f7f"
-              maximumTrackTintColor="#f0dfe3"
-              thumbTintColor="#ff8f7f"
-            />
-            <Text style={s.budgetRangeLabel}>{lang === 'en' ? 'Max' : '上限'}</Text>
-            <Slider
-              style={{ width: '100%', height: 36 }}
-              minimumValue={0} maximumValue={50000} step={500}
-              value={budget ?? 50000}
-              onValueChange={(v) => {
-                const max = Math.round(v);
-                onSetBudget(max);
-                if (max < budgetMin) onSetBudgetMin(max);
-              }}
-              minimumTrackTintColor="#ff8f7f"
-              maximumTrackTintColor="#f0dfe3"
-              thumbTintColor="#ff8f7f"
-            />
-            <View style={s.budgetLabels}>
-              {['¥0', '¥25,000', '¥50,000'].map((l) => (
-                <Text key={l} style={s.budgetLabelText}>{l}</Text>
-              ))}
-            </View>
-          </View>
-          <View style={[s.grid, { gap: 8 }]}>
+          <View style={[s.grid, { gap: 10, marginTop: 8 }]}>
             {budgetChips.map((chip) => {
-              const active = budgetMin === chip.min && budget === chip.max;
+              const active = budget === chip.max;
               return (
                 <TouchableOpacity
                   key={chip.label}
-                  onPress={() => { onSetBudget(chip.max as any); onSetBudgetMin(chip.min); }}
-                  style={[s.budgetChip, active && s.budgetChipActive]}
+                  onPress={() => { onSetBudget(chip.max as any); onSetBudgetMin(0); }}
+                  style={[s.budgetChip, { width: BTN_2, paddingVertical: 18 }, active && s.budgetChipActive]}
                 >
-                  <Text style={active ? s.budgetChipTextActive : s.budgetChipText}>
+                  <Text style={[active ? s.budgetChipTextActive : s.budgetChipText, { fontSize: 15 }]}>
                     {chip.label}
                   </Text>
                 </TouchableOpacity>
@@ -975,19 +930,23 @@ export default function QuizFlow(props: Props) {
     // Step 5: Distance (お腹すいた) or Time (all others)
     if (step === 5) {
       if (isHaraMode) {
-        const distOpts = lang === 'en' ? FOOD_DISTANCE_EN : FOOD_DISTANCE_OPTIONS;
-        const currentDist = dynamicAnswers['food_distance'] ?? '';
-        const displayDist = lang === 'en'
-          ? FOOD_DISTANCE_EN[FOOD_DISTANCE_OPTIONS.indexOf(currentDist)] ?? currentDist
-          : currentDist;
+        const FOOD_DIST_OPTS = [
+          { label: '近場🚶（歩きでも行ける距離）', time: '15〜30分' },
+          { label: '多少🚃（駅１、２隣）', time: '30〜60分' },
+          { label: 'ほどほど遠く🚇（電車で30分ほど）', time: '1〜2時間' },
+          { label: 'ガッツリ遠くてもOK🚗（１つ県外でも）', time: '4〜6時間' },
+        ];
         return (
           <>
             <Text style={s.stepTitle}>{t.foodDistTitle}</Text>
             <Text style={s.stepSub}>{t.foodDistSub}</Text>
-            {renderOptions(distOpts, displayDist, (v) => {
-              const idx = distOpts.indexOf(v);
-              onSetDynamicAnswers({ ...dynamicAnswers, food_distance: idx >= 0 ? FOOD_DISTANCE_OPTIONS[idx] : v });
-            }, 2)}
+            {renderOptions(
+              FOOD_DIST_OPTS.map(o => o.label),
+              FOOD_DIST_OPTS.find(o => o.time === selectedTime)?.label ?? '',
+              (v) => {
+                const found = FOOD_DIST_OPTS.find(o => o.label === v);
+                if (found) onSelectTime(found.time);
+              }, 2)}
           </>
         );
       }
@@ -1252,6 +1211,12 @@ export default function QuizFlow(props: Props) {
         selectedMood === '体を動かしたい' ||
         selectedMood === '遠くに行きたい'
       ) { onSetStep(8); return; }
+      if (selectedMood === 'まったりしたい') {
+        if (isNatureMode) { onSetStep(9); return; }
+        if (isOnsenMode) { onSetStep(9); return; }
+        if (isCafeMode) { onSetStep(8); return; }
+        if (isSceneryMode) { onSetStep(7); return; }
+      }
       onSetStep(6); return;
     }
     if (step === 6) {
@@ -1273,6 +1238,27 @@ export default function QuizFlow(props: Props) {
   };
   const isLastStep = step === 10;
 
+  // Progress bar X/N
+  const getProgressSeq = (): number[] => {
+    const hasFoodSub = ['居酒屋🍺','和食🍣','洋食🍳','焼肉🥩','アジア系統🍛','各国料理🌍','ラーメン🍜','カフェ・スイーツ☕']
+      .some(k => (dynamicAnswers['food_genre_new'] ?? '').includes(k));
+    if (selectedMood === '時間潰したい') return [1,2,3,4,5,7];
+    if (selectedMood === '自然感じたい') return [1,2,3,4,5,9,7];
+    if (['ドライブしたい','わいわい楽しみたい','集中したい','体を動かしたい','遠くに行きたい'].includes(selectedMood))
+      return [1,2,3,4,5,8,7];
+    if (selectedMood === 'お腹すいた')
+      return hasFoodSub ? [1,2,3,4,5,6,8,7] : [1,2,3,4,5,6,7];
+    if (selectedMood === 'まったりしたい') {
+      if (isCafeMode) return [1,2,3,4,5,6,8,9,7];
+      if (isNatureMode || isOnsenMode) return [1,2,3,4,5,6,9,7];
+      return [1,2,3,4,5,6,7];
+    }
+    return [1,2,3,4,5,6,7];
+  };
+  const progressSeq = getProgressSeq();
+  const progressIdx = Math.max(1, progressSeq.indexOf(step) + 1);
+  const progressTotal = progressSeq.length;
+
   return (
     <View style={s.root}>
       {/* iOS nav bar */}
@@ -1282,9 +1268,9 @@ export default function QuizFlow(props: Props) {
           <Text style={s.backText}>{t.back}</Text>
         </TouchableOpacity>
         <View style={s.progressWrap}>
-          <View style={[s.progressBar, { width: `${(step / 10) * 100}%` as any }]} />
+          <View style={[s.progressBar, { width: `${(progressIdx / progressTotal) * 100}%` as any }]} />
         </View>
-        <Text style={s.stepCount}>{step}/10</Text>
+        <Text style={s.stepCount}>{progressIdx}/{progressTotal}</Text>
       </View>
 
       {/* Content */}
