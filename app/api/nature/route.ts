@@ -282,6 +282,35 @@ export async function POST(req: NextRequest) {
       : getRadiusM(transport);
     console.log(`[nature] ▶ ${config.label} radius=${radiusM / 1000}km transport="${transportArr.join(",") || "未指定"}" time="${time ?? "-"}"`);
 
+    // ─── Supabase-first（登録スポットを優先） ────────────────────────────
+    try {
+      const { searchPlacesByTags } = await import("@/lib/supabase-places");
+      const { getNatureTags } = await import("@/lib/mood-tag-map");
+      const tagResult = getNatureTags(subGenre);
+      const sbResults = await searchPlacesByTags({
+        mustTags: tagResult.tags,
+        fallbackTags: tagResult.fallback,
+        orTags: tagResult.orTags,
+        lat: searchLat,
+        lng: searchLng,
+        radiusKm: tagResult.radiusKm,
+        transport,
+        limit: 20,
+        googleApiKey: googleKey,
+      });
+      if (sbResults.length >= 3) {
+        console.log(`[nature] Supabase ${sbResults.length}件 → 早期リターン`);
+        return NextResponse.json({
+          data: shuffleArray(sbResults),
+          subGenreLabel: config.label,
+          areaLabel,
+        } satisfies NatureApiResponse);
+      }
+      console.log(`[nature] Supabase ${sbResults.length}件 → Google Placesにフォールバック`);
+    } catch (e) {
+      console.warn("[nature] Supabase-first error:", e);
+    }
+
     // freeWord があれば各クエリに付加
     const buildQuery = (q: string) => {
       const base = buildTextQuery(q, areaLabel);
@@ -367,7 +396,9 @@ export async function POST(req: NextRequest) {
       if (budgetFiltered.length >= Math.min(3, places.length)) places = budgetFiltered;
     }
 
-    console.log(`[nature] 最終 ${places.length}件`);
+    // ── 結果をシャッフル（ワンパターン化防止）─────────────────────────────
+    places = shuffleArray(places);
+    console.log(`[nature] 最終 ${places.length}件（シャッフル済み）`);
 
     return NextResponse.json({
       data:          places,
@@ -466,4 +497,14 @@ function compactWeekdays(weekdays: string[]): string {
                               `${s}〜${e}`;
     return `${dayStr}: ${g.hours}`;
   }).join("\n");
+}
+
+/** Fisher-Yates シャッフル（結果のワンパターン化防止） */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

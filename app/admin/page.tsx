@@ -171,7 +171,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
-  const [tab, setTab] = useState<"stats" | "suggestions" | "add-spot" | "import" | "visited" | "reports" | "devlog" | "featured" | "geocode" | "merge" | "retag">("stats");
+  const [tab, setTab] = useState<"stats" | "suggestions" | "add-spot" | "import" | "visited" | "reports" | "mood_ratings" | "devlog" | "featured" | "geocode" | "merge" | "retag">("stats");
 
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -923,6 +923,7 @@ export default function AdminPage() {
   const [spSearchLoading, setSpSearchLoading] = useState(false);
   const [spSearchResults, setSpSearchResults] = useState<Array<{ id: string; name: string; address: string; tags: string[]; is_active: boolean; google_place_id: string | null }> | null>(null);
   const [spSearchError, setSpSearchError]     = useState("");
+  const [spSearchIsTag, setSpSearchIsTag]     = useState(false);
   const [spDeleteConfirm, setSpDeleteConfirm] = useState<string | null>(null); // 削除確認中のスポットID
   const [spDeleting, setSpDeleting]           = useState<Set<string>>(new Set()); // 削除処理中のID集合
   const [spTagRemoving, setSpTagRemoving]     = useState<Set<string>>(new Set()); // タグ削除処理中 "spotId::tag"
@@ -932,16 +933,16 @@ export default function AdminPage() {
   const handleSpSearch = async () => {
     const kw = spSearchKeyword.trim();
     if (!kw) return;
-    setSpSearchLoading(true); setSpSearchError(""); setSpSearchResults(null);
+    setSpSearchLoading(true); setSpSearchError(""); setSpSearchResults(null); setSpSearchIsTag(false);
     try {
       const res = await fetch("/api/admin/search-places", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: ADMIN_PASSWORD, keyword: spSearchKeyword }),
+        body: JSON.stringify({ secret: ADMIN_PASSWORD, keyword: spSearchKeyword.trim() }),
       });
       const data = await res.json();
       if (!data.ok) setSpSearchError(data.error ?? "エラーが発生しました");
-      else setSpSearchResults(data.places);
+      else { setSpSearchResults(data.places); setSpSearchIsTag(data.isTagSearch ?? false); }
     } catch (e) { setSpSearchError(String(e)); }
     setSpSearchLoading(false);
   };
@@ -1781,6 +1782,26 @@ export default function AdminPage() {
     loadFeaturedPages();
   }, [authed, tab]);
 
+  // 気分別評価データ（mood_ratingsタブ）
+  const [moodRatings, setMoodRatings] = useState<Array<{ place_name: string; mood: string; sub_category: string; good: number; bad: number; last_bad_at: string }>>([]);
+  const [moodRatingsLoading, setMoodRatingsLoading] = useState(false);
+  const [moodRatingsError, setMoodRatingsError] = useState("");
+  const [moodRatingsThreshold, setMoodRatingsThreshold] = useState(20);
+
+  useEffect(() => {
+    if (!authed || tab !== "mood_ratings") return;
+    setMoodRatingsLoading(true);
+    setMoodRatingsError("");
+    fetch(`/api/mood-rating?secret=moodgoadmin123`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) setMoodRatings(d.data ?? []);
+        else setMoodRatingsError(d.error ?? "取得に失敗しました");
+      })
+      .catch(e => setMoodRatingsError(String(e)))
+      .finally(() => setMoodRatingsLoading(false));
+  }, [authed, tab]);
+
   // 不適切報告データ読み込み（reportsタブ）
   useEffect(() => {
     if (!authed || tab !== "reports") return;
@@ -2274,6 +2295,7 @@ export default function AdminPage() {
             { key: "import", label: "🔍 一括取り込み" },
             { key: "visited", label: "🚶 訪問学習データ" },
             { key: "reports", label: "⚠ 不適切報告" },
+            { key: "mood_ratings", label: "👎 合わない集計" },
             { key: "featured", label: "⭐ 特集ページ" },
             { key: "devlog", label: "📋 開発ログ" },
             { key: "geocode", label: "📍 座標登録" },
@@ -3972,7 +3994,7 @@ export default function AdminPage() {
             <div style={card}>
               <div style={{ ...titleStyle, color: "#0891b2" }}>🔎 登録済みスポット検索</div>
               <div style={{ fontSize: "13px", color: "#164e63", marginBottom: "14px", lineHeight: 1.7 }}>
-                名前・住所・キーワードでSupabaseに登録済みかどうか確認できます。
+                名前・住所で検索できます。<strong>#温泉</strong> のように # から入力するとそのタグを持つスポットを一覧表示します。
               </div>
               <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                 <input
@@ -3991,7 +4013,11 @@ export default function AdminPage() {
               {spSearchResults !== null && (
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "#0891b2", marginBottom: "8px" }}>
-                    {spSearchResults.length === 0 ? "⚠️ 該当なし（未登録）" : `✅ ${spSearchResults.length}件 登録済み`}
+                    {spSearchResults.length === 0
+                      ? (spSearchIsTag ? `⚠️ ${spSearchKeyword} を持つスポットなし` : "⚠️ 該当なし（未登録）")
+                      : (spSearchIsTag
+                          ? `🏷️ ${spSearchKeyword} タグ付きスポット ${spSearchResults.length}件`
+                          : `✅ ${spSearchResults.length}件 登録済み`)}
                   </div>
                   {spSearchResults.length > 0 && (
                     <div style={{ display: "grid", gap: "6px", maxHeight: "600px", overflowY: "auto" }}>
@@ -5707,6 +5733,137 @@ export default function AdminPage() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ===== 気分別合わない集計タブ ===== */}
+        {tab === "mood_ratings" && (
+          <div>
+            <div style={{ ...card, marginBottom: "24px" }}>
+              <div style={{ ...titleStyle, marginBottom: "16px" }}>👎 気分に合わない集計</div>
+              <div style={{ fontSize: "13px", color: "#7a5860", marginBottom: "16px" }}>
+                ユーザーが「この気分には合わない」を押したスポットの集計です。<br />
+                合わない件数が多いスポットはタグを見直すか削除を検討してください。
+              </div>
+
+              {/* しきい値フィルター */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#4a3034" }}>
+                  合わない件数フィルター：
+                </label>
+                {[0, 5, 10, 20, 50].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setMoodRatingsThreshold(n)}
+                    style={{ padding: "6px 14px", borderRadius: "999px", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", background: moodRatingsThreshold === n ? "#ef4444" : "#f3f4f6", color: moodRatingsThreshold === n ? "#fff" : "#374151" }}
+                  >
+                    {n === 0 ? "全件" : `${n}件以上`}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { setMoodRatingsLoading(true); fetch("/api/mood-rating?secret=moodgoadmin123").then(r => r.json()).then(d => { if (d.ok) setMoodRatings(d.data ?? []); }).finally(() => setMoodRatingsLoading(false)); }}
+                  style={{ padding: "6px 14px", borderRadius: "999px", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", background: "#fbbf24", color: "#fff" }}
+                >
+                  🔄 再読み込み
+                </button>
+              </div>
+
+              {moodRatingsLoading && <div style={{ textAlign: "center", padding: "40px", color: "#7a5860" }}>読み込み中...</div>}
+              {moodRatingsError && <div style={{ color: "#ef4444", padding: "12px", borderRadius: "8px", background: "#fef2f2" }}>{moodRatingsError}</div>}
+
+              {!moodRatingsLoading && !moodRatingsError && (() => {
+                const filtered = moodRatings.filter(r => r.bad >= moodRatingsThreshold);
+                if (filtered.length === 0) return (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#9ca3af" }}>
+                    {moodRatingsThreshold > 0 ? `合わない${moodRatingsThreshold}件以上のスポットはありません` : "データがありません"}
+                  </div>
+                );
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {filtered.map((r, i) => {
+                      const badRatio = r.good + r.bad > 0 ? Math.round((r.bad / (r.good + r.bad)) * 100) : 0;
+                      const isAlert = r.bad >= 20;
+                      return (
+                        <div key={i} style={{ border: `2px solid ${isAlert ? "#fca5a5" : "#e5e7eb"}`, borderRadius: "16px", padding: "16px 20px", background: isAlert ? "#fff5f5" : "#fff", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                          <div style={{ flex: 1, minWidth: "180px" }}>
+                            <div style={{ fontWeight: 900, fontSize: "16px", color: "#111", marginBottom: "4px" }}>
+                              {isAlert && <span style={{ color: "#ef4444", marginRight: "6px" }}>⚠️</span>}
+                              {r.place_name}
+                            </div>
+                            {r.mood && (
+                              <div style={{ fontSize: "12px", color: "#7a5860", marginBottom: "2px" }}>
+                                🎭 気分: <strong>{r.mood}</strong>
+                                {r.sub_category && (
+                                  <span style={{ marginLeft: "8px", color: "#9061f9", fontWeight: 700 }}>
+                                    ／ 深掘り: {r.sub_category}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <div style={{ display: "flex", gap: "8px", fontSize: "13px", fontWeight: 700 }}>
+                              <span style={{ color: "#16a34a" }}>👍 {r.good}件</span>
+                              <span style={{ color: "#ef4444" }}>👎 {r.bad}件</span>
+                              <span style={{ color: "#6b7280" }}>合わない率: {badRatio}%</span>
+                            </div>
+                            {r.last_bad_at && <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "4px" }}>最終: {new Date(r.last_bad_at).toLocaleDateString("ja-JP")}</div>}
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            <button
+                              onClick={async () => {
+                                setSpSearchKeyword(r.place_name);
+                                setTab("import" as typeof tab);
+                                // タブ切り替え後に検索実行（少し待ってDOMが描画されてから）
+                                setTimeout(async () => {
+                                  const kw = r.place_name.trim();
+                                  if (!kw) return;
+                                  setSpSearchLoading(true);
+                                  setSpSearchError("");
+                                  setSpSearchResults(null);
+                                  setSpSearchIsTag(false);
+                                  try {
+                                    const res = await fetch("/api/admin/search-places", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ secret: ADMIN_PASSWORD, keyword: kw }),
+                                    });
+                                    const d = await res.json();
+                                    if (d.ok) setSpSearchResults(d.data ?? []);
+                                    else setSpSearchError(d.error ?? "検索エラー");
+                                  } catch (e) {
+                                    setSpSearchError(String(e));
+                                  } finally {
+                                    setSpSearchLoading(false);
+                                  }
+                                }, 100);
+                              }}
+                              style={{ padding: "8px 14px", borderRadius: "999px", border: "none", background: "#fbbf24", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              🏷 タグを修正
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`「${r.place_name}」を本当に削除しますか？この操作は取り消せません。`)) return;
+                                try {
+                                  const res = await fetch("/api/admin/search-places", {
+                                    method: "GET",
+                                    headers: { "Content-Type": "application/json" },
+                                  });
+                                  // 削除はタグ修正ページに誘導（直接削除APIは別途実装）
+                                  alert("削除は「登録済みスポット検索」タブから場所名で検索して行ってください。");
+                                } catch { alert("エラーが発生しました"); }
+                              }}
+                              style={{ padding: "8px 14px", borderRadius: "999px", border: "none", background: "#ef4444", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              🗑 削除
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 

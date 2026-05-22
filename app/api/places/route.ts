@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       transport    = "",
       limit        = 20,
       mustTags: customMustTags,
+      orTags: customOrTags,
       time,
       companion,
       budget,
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       transport?:   string | string[];
       limit?:       number;
       mustTags?:    string[];
+      orTags?:      string[];
       time?:        string;
       companion?:   string;
       budget?:      number;
@@ -74,11 +76,13 @@ export async function POST(req: NextRequest) {
     // タグ構築
     let mustTags: string[];
     let fallbackTags: string[];
+    let orTags: string[] | undefined;
 
     if (customMustTags && customMustTags.length > 0) {
       // カスタムタグが渡された場合はそのまま使用
       mustTags     = customMustTags;
       fallbackTags = customMustTags;
+      orTags       = customOrTags;
     } else {
       // food_genre_new / food_sub_choice から自動構築
       const tags = buildFoodSearchTags(genreAnswer, subAnswer);
@@ -86,13 +90,14 @@ export async function POST(req: NextRequest) {
       fallbackTags = tags.fallbackTags;
     }
 
-    if (mustTags.length === 0) {
+    if (mustTags.length === 0 && (!orTags || orTags.length === 0)) {
       return NextResponse.json({ ok: true, data: [], count: 0 });
     }
 
     const results = await searchPlacesByTags({
       mustTags,
       fallbackTags,
+      orTags,
       lat,
       lng,
       radiusKm,

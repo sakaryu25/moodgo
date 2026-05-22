@@ -81,12 +81,6 @@ function tagsToTagline(tags: string[], name: string): string {
   const has = (t: string) => tags.includes(t);
 
   // 温泉・サウナ系
-  if (has("#天然温泉") && has("#サウナ"))  return "♨️ 天然温泉＆サウナでとことんリラックス";
-  if (has("#天然温泉"))                    return "♨️ 源泉かけ流しの天然温泉でゆったり";
-  if (has("#大型銭湯") && has("#サウナ"))  return "🔥 スーパー銭湯＆サウナで一日まったり";
-  if (has("#大型銭湯"))                    return "🏊 岩盤浴・食事も充実のスーパー銭湯";
-  if (has("#銭湯") && has("#サウナ"))      return "🔥 サウナ付き銭湯でさっぱり整う";
-  if (has("#銭湯"))                        return "🛁 昔ながらの銭湯でほっとひと息";
   if (has("#温泉") && has("#サウナ"))      return "🔥 温泉＆サウナで心身ともにリフレッシュ";
   if (has("#温泉"))                        return "♨️ 温泉でゆったり癒しのひととき";
   if (has("#サウナ") && has("#岩盤浴"))    return "🔥 サウナ＆岩盤浴でデトックス";

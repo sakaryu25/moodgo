@@ -14,14 +14,27 @@ export async function POST(req: NextRequest) {
   const keyword: string = (body.keyword ?? "").trim();
   if (!keyword) return NextResponse.json({ ok: false, error: "keyword が必要です" }, { status: 400 });
 
-  const { data, error } = await supabase
+  // ── #タグ 検索 ──────────────────────────────────────────────────────────────
+  // "#温泉" のように # で始まる場合は tags 配列を contains で検索
+  const isTagSearch = keyword.startsWith("#");
+
+  let query = supabase
     .from("places")
     .select("id, name, address, tags, is_active, google_place_id")
-    .or(`name.ilike.%${keyword}%,address.ilike.%${keyword}%`)
     .order("name")
-    .limit(1000);
+    .limit(2000);
+
+  if (isTagSearch) {
+    // 完全一致タグ検索（例: "#温泉"）
+    query = query.contains("tags", [keyword]);
+  } else {
+    // 名前・住所 あいまい検索
+    query = query.or(`name.ilike.%${keyword}%,address.ilike.%${keyword}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, count: (data ?? []).length, places: data ?? [] });
+  return NextResponse.json({ ok: true, count: (data ?? []).length, places: data ?? [], isTagSearch });
 }

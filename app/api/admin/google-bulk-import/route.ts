@@ -188,7 +188,7 @@ function ruleBasedTags(name: string, keyword: string): string[] {
     tags.add("#温泉"); tags.add("#まったりしたい"); tags.add("#恋人"); tags.add("#友達");
   }
   if (/銭湯/i.test(kw) || /銭湯/i.test(nm)) {
-    tags.add("#銭湯"); tags.add("#まったりしたい"); tags.add("#1人");
+    tags.add("#温泉"); tags.add("#まったりしたい"); tags.add("#1人");
   }
   if (/サウナ/i.test(kw) || /サウナ/i.test(nm)) {
     tags.add("#サウナ"); tags.add("#まったりしたい");

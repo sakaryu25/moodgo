@@ -14,7 +14,7 @@ import {
   getWaiWaiTags, getDriveTags, getFocusTags,
   getSportsTags, getTravelTags,
 } from "@/lib/mood-tag-map";
-import { detectUserPrefecture, getNearbyPrefectures } from "@/lib/prefecture-utils";
+import { detectUserPrefecture, getNearbyPrefectures, getPrefectureButtonList } from "@/lib/prefecture-utils";
 
 type RouteByMode = {
   icon: string;
@@ -349,6 +349,7 @@ export default function Home() {
   const [userPrefecture, setUserPrefecture] = useState<string>("");
   const [lastSearchParams, setLastSearchParams] = useState<{
     mustTags: string[];
+    orTags?: string[];
     lat: number;
     lng: number;
     radiusKm: number;
@@ -671,6 +672,63 @@ export default function Home() {
     "隠れ家やレトロな非日常空間に浸りたい🏚️": "隠れ家カフェ 古民家 純喫茶",
     "本を読んだり一人の世界に入り込みたい📚": "ブックカフェ 静か おひとりさま",
     "とにかく美味しい甘いもの・スイーツ🍰": "絶品スイーツ ケーキ 自家製",
+  };
+
+  // ─── ステップ進捗ラベルを計算 ──────────────────────────────────────────────
+  // 内部ステップ番号（1〜10）は気分によって表示順が異なる。
+  // この関数は「表示位置 / 合計ページ数」の文字列を返す。
+  const getProgressLabel = (): string | null => {
+    if (step >= 10) return null; // 検索中・結果は別途 "結果" と表示
+    const mood   = selectedMood;
+    const relax  = dynamicAnswers["relax_place"] ?? "";
+    const genre  = dynamicAnswers["food_genre_new"] ?? "";
+
+    // 気分ごとの実際の表示ステップ列（内部 step 番号の順序）
+    let seq: number[];
+
+    if (mood === "時間潰したい") {
+      // step6 はスキップ
+      seq = [1, 2, 3, 4, 5, 7];
+    } else if (mood === "自然感じたい") {
+      // step6 は動的質問なしで自動スキップ → step9（自然サブジャンル）へ
+      seq = [1, 2, 3, 4, 5, 9, 7];
+    } else if (
+      mood === "ドライブしたい" ||
+      mood === "わいわい楽しみたい" ||
+      mood === "集中したい"  ||
+      mood === "体を動かしたい" ||
+      mood === "遠くに行きたい"
+    ) {
+      // step6 をスキップして step8（サブカテゴリ）へ
+      seq = [1, 2, 3, 4, 5, 8, 7];
+    } else if (mood === "お腹すいた") {
+      const hasSub = genre !== "" &&
+        Object.keys(FOOD_SUB_QUESTIONS_MAP).some(k => genre.includes(k));
+      seq = hasSub ? [1, 2, 3, 4, 5, 6, 8, 7] : [1, 2, 3, 4, 5, 6, 7];
+    } else if (mood === "まったりしたい") {
+      // step6 はリラックス場所選択。選択値によって後続ステップが変わる
+      if (relax.includes("カフェ"))
+        seq = [1, 2, 3, 4, 5, 6, 8, 9, 7];  // 距離 → カフェサブ → 自由ワード
+      else if (relax.includes("温泉") || relax.includes("自然の中"))
+        seq = [1, 2, 3, 4, 5, 6, 9, 7];     // 温泉カテゴリ or 自然サブジャンル → 自由ワード
+      else if (
+        relax !== "" &&
+        Object.keys(RELAX_SUB_QUESTIONS_MAP).some(
+          k => relax.includes(k) && RELAX_SUB_QUESTIONS_MAP[k] != null,
+        )
+      )
+        seq = [1, 2, 3, 4, 5, 6, 8, 7];     // サブ質問あり
+      else if (relax !== "")
+        seq = [1, 2, 3, 4, 5, 6, 7];        // サブ質問なし（絶景など）
+      else
+        seq = [1, 2, 3, 4, 5, 6, 8, 7];     // まだ未選択 → 最頻パスで推定
+    } else {
+      seq = [1, 2, 3, 4, 5, 6, 7];
+    }
+
+    const idx = seq.indexOf(step);
+    if (idx < 0) return null; // このステップはカウント外
+    return `${idx + 1} / ${seq.length}`;
   };
 
   const UI_EN = {
@@ -1226,9 +1284,10 @@ export default function Home() {
     if (selectedMood === "遠くに行きたい") return "🚄";
     const t = selectedTransports.join(",");
     if (t.includes("電車") || t.includes("バス")) return "🚃";
-    if (t.includes("車") || t.includes("バイク")) return "🚗";
+    if (t.includes("車") || t.includes("バイク") || t.includes("なんでも")) return "🚗";
     if (t.includes("自転車")) return "🚲";
-    return "🚶";
+    if (t.includes("徒歩") || t.includes("歩き")) return "🚶";
+    return "🚗"; // デフォルトは車（なんでも相当）
   })();
 
   // 交通手段アイコン → 「〇〇で」ラベル変換
@@ -1241,11 +1300,19 @@ export default function Home() {
   };
   const travelModeLabel = iconToModeLabel(travelIcon);
 
+  // Supabase の distanceInfo に含まれるモード接頭辞を除去するヘルパー
+  // 例: "車で約20分 / 5.0km" → "約20分 / 5.0km"
+  const stripModePrefix = (text: string): string =>
+    text.replace(/^(車|電車|自転車|徒歩|バイク)で/, "");
+
   // 所要時間テキストを組み立てる（durationText優先、なければdistanceText）
   const buildTravelChip = (icon: string, durationText: string, distanceText: string) => {
     const label = iconToModeLabel(icon);
+    // distanceText が Supabase の distanceInfo（"車で約20分 / 5.0km"）の場合、
+    // モード接頭辞を除去してから label を付ける（二重表示防止）
+    const cleanedDistance = stripModePrefix(distanceText);
     if (durationText) return `${icon} ${label}${durationText}`;
-    if (distanceText) return `${icon} ${label ? label : ""}${distanceText}`;
+    if (cleanedDistance) return `${icon} ${label}${cleanedDistance}`;
     return "";
   };
 
@@ -1335,7 +1402,7 @@ export default function Home() {
         const _sbTravel = getTravelTags(travelSubCategory);
         const sbRes = await fetch("/api/places", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mustTags: _sbTravel.tags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, preferFar: true }),
+          body: JSON.stringify({ mustTags: _sbTravel.tags, orTags: _sbTravel.orTags, lat: originLat ?? 0, lng: originLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, preferFar: true }),
         });
         if (sbRes.ok) {
           const sbData = await sbRes.json();
@@ -1368,6 +1435,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mustTags:    lastSearchParams.mustTags,
+          orTags:      lastSearchParams.orTags,
           lat:         lastSearchParams.lat,
           lng:         lastSearchParams.lng,
           radiusKm:    lastSearchParams.radiusKm,
@@ -1517,11 +1585,12 @@ export default function Home() {
           setOriginLng(longitude);
 
           // 都道府県を自動検出してフィルターボタンを設定
+          // GPS座標 + 実際の隣接マップを使用（重心距離より正確）
           const detectedPref = detectUserPrefecture(latitude, longitude);
           if (detectedPref) {
             setUserPrefecture(detectedPref);
-            const neighbors = getNearbyPrefectures(detectedPref, 5);
-            setPrefectureButtons([detectedPref, ...neighbors]);
+            const buttonList = getPrefectureButtonList(latitude, longitude, 7);
+            setPrefectureButtons(buttonList);
           }
 
           const res = await fetch("/api/location-to-area", {
@@ -1703,7 +1772,7 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbTravel.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, preferFar: true }),
+            body: JSON.stringify({ mustTags: _sbTravel.tags, orTags: _sbTravel.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbTravel.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, preferFar: true }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
@@ -1760,14 +1829,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbSports.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbSports.tags, orTags: _sbSports.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setSportsFacilities(_sbData.data as PlaceResponse[]);
               setSportsSubCategoryLabel(_sbSports.label);
-              setLastSearchParams({ mustTags: _sbSports.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "sports" });
+              setLastSearchParams({ mustTags: _sbSports.tags, orTags: _sbSports.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbSports.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "sports" });
               setStep(11); return;
             }
           }
@@ -1820,14 +1889,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbFocus.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbFocus.tags, orTags: _sbFocus.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setFocusFacilities(_sbData.data as PlaceResponse[]);
               setFocusSubCategoryLabel(_sbFocus.label);
-              setLastSearchParams({ mustTags: _sbFocus.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "focus" });
+              setLastSearchParams({ mustTags: _sbFocus.tags, orTags: _sbFocus.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbFocus.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "focus" });
               setStep(11); return;
             }
           }
@@ -1880,14 +1949,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbDrive.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbDrive.tags, orTags: _sbDrive.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setDriveFacilities(_sbData.data as PlaceResponse[]);
               setDriveSubCategoryLabel(_sbDrive.label);
-              setLastSearchParams({ mustTags: _sbDrive.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "drive" });
+              setLastSearchParams({ mustTags: _sbDrive.tags, orTags: _sbDrive.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbDrive.radiusKm, transport: ["車"], time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "drive" });
               setStep(11); return;
             }
           }
@@ -1942,14 +2011,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbNature.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbNature.tags, orTags: _sbNature.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setNatureFacilities(_sbData.data as PlaceResponse[]);
               setNatureSubGenreLabel(_sbNature.label);
-              setLastSearchParams({ mustTags: _sbNature.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "nature" });
+              setLastSearchParams({ mustTags: _sbNature.tags, orTags: _sbNature.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbNature.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "nature" });
               setStep(11); return;
             }
           }
@@ -2003,14 +2072,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbCafe.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbCafe.tags, orTags: _sbCafe.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setCafeFacilities(_sbData.data as PlaceResponse[]);
               setCafeSubCategoryLabel(_sbCafe.label);
-              setLastSearchParams({ mustTags: _sbCafe.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "cafe" });
+              setLastSearchParams({ mustTags: _sbCafe.tags, orTags: _sbCafe.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbCafe.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "cafe" });
               setStep(11); return;
             }
           }
@@ -2065,14 +2134,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbWaiWai.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbWaiWai.tags, orTags: _sbWaiWai.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setWaiWaiFacilities(_sbData.data as PlaceResponse[]);
               setWaiWaiSubCategoryLabel(_sbWaiWai.label);
-              setLastSearchParams({ mustTags: _sbWaiWai.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "waiwai" });
+              setLastSearchParams({ mustTags: _sbWaiWai.tags, orTags: _sbWaiWai.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbWaiWai.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "waiwai" });
               setStep(11); return;
             }
           }
@@ -2127,14 +2196,14 @@ export default function Home() {
         try {
           const _sbRes = await fetch("/api/places", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mustTags: _sbOnsen.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+            body: JSON.stringify({ mustTags: _sbOnsen.tags, orTags: _sbOnsen.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
           });
           if (_sbRes.ok) {
             const _sbData = await _sbRes.json();
             if ((_sbData.data ?? []).length >= 1) {
               setOnsenFacilities(_sbData.data as PlaceResponse[]);
               setOnsenCategoryLabel(_sbOnsen.label);
-              setLastSearchParams({ mustTags: _sbOnsen.tags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "onsen" });
+              setLastSearchParams({ mustTags: _sbOnsen.tags, orTags: _sbOnsen.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbOnsen.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "onsen" });
               setStep(11); return;
             }
           }
@@ -2169,6 +2238,62 @@ export default function Home() {
       }
       return;
     }
+    // ── まったりしたい + 絶景スポット パス: Supabase から絶景・展望台スポットを取得 ──
+    const isRelaxViewPath =
+      !refineText &&
+      selectedMood === "まったりしたい" &&
+      (dynamicAnswers["relax_place"] ?? "").includes("絶景");
+
+    if (isRelaxViewPath) {
+      try {
+        setIsLoadingNature(true);
+        setNatureFacilities(null);
+        const _sbView = getNatureTags("view", true);
+        try {
+          const _sbRes = await fetch("/api/places", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mustTags: _sbView.tags, orTags: _sbView.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbView.radiusKm, transport: selectedTransports.length > 0 ? selectedTransports : undefined, limit: 20, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, budgetMin, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || "") }),
+          });
+          if (_sbRes.ok) {
+            const _sbData = await _sbRes.json();
+            if ((_sbData.data ?? []).length >= 1) {
+              setNatureFacilities(_sbData.data as PlaceResponse[]);
+              setNatureSubGenreLabel(_sbView.label);
+              setLastSearchParams({ mustTags: _sbView.tags, orTags: _sbView.orTags, lat: effectiveLat ?? 0, lng: effectiveLng ?? 0, radiusKm: _sbView.radiusKm, transport: selectedTransports, time: selectedTime || undefined, companion: selectedCompanion || undefined, budget, freeWord: freeWord || undefined, minRadiusKm: calcMinRadiusKm(selectedTransports, selectedTime || ""), path: "nature" });
+              setStep(11); return;
+            }
+          }
+        } catch { /* fallback below */ }
+        // Supabase 0件 → /api/nature (view) にフォールバック
+        const res = await fetch("/api/nature", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subGenre: "view",
+            lat: effectiveLat ?? 0,
+            lng: effectiveLng ?? 0,
+            areaLabel: locationDisplayArea || selectedArea || "現在地周辺",
+            transport: selectedTransports.length > 0 ? selectedTransports : undefined,
+            time: selectedTime || undefined,
+            companion: selectedCompanion || undefined,
+            budget,
+            budgetMin,
+            freeWord: freeWord || undefined,
+          }),
+        });
+        const data = await res.json();
+        setNatureFacilities(data.data ?? []);
+        setNatureSubGenreLabel(data.subGenreLabel ?? "🌅 圧倒的な絶景");
+        setStep(11);
+      } catch (e) {
+        console.error(e);
+        alert("絶景スポットの取得に失敗しました。");
+      } finally {
+        setIsLoadingNature(false);
+      }
+      return;
+    }
+
     // ── 通常パス ─────────────────────────────────────────────────────────────
     try {
       setIsLoadingRecommendations(true);
@@ -2296,6 +2421,7 @@ export default function Home() {
       if (!lastSearchParams) { setPrefFilteredFacilities([]); return; }
       const body: Record<string, unknown> = {
         mustTags:    lastSearchParams.mustTags,
+        orTags:      lastSearchParams.orTags,
         lat:         lastSearchParams.lat,
         lng:         lastSearchParams.lng,
         radiusKm:    lastSearchParams.radiusKm,
@@ -2414,6 +2540,52 @@ export default function Home() {
         mapClickedPlaces: [],
       }),
     }).catch(() => {});
+
+    // 気分別評価を専用エンドポイントにも送信（管理者集計用）
+    // 深掘り質問（サブカテゴリ）も一緒に送信
+    const subCategoryLabel = (() => {
+      const m = answers.mood ?? selectedMood;
+      if (m === "ドライブしたい")          return driveSubCategoryLabel;
+      if (m === "自然感じたい")            return natureSubGenreLabel;
+      if (m === "まったりしたい")          return cafeSubCategoryLabel;
+      if (m === "わいわい楽しみたい")      return waiWaiSubCategoryLabel;
+      if (m === "集中したい")              return focusSubCategoryLabel;
+      if (m === "体を動かしたい")          return sportsSubCategoryLabel;
+      if (m === "遠くに行きたい")          return travelSubCategoryLabel;
+      return "";
+    })();
+    fetch("/api/mood-rating", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ place_name: placeTitle, mood: answers.mood, sub_category: subCategoryLabel || undefined, verdict }),
+    }).catch(() => {});
+  };
+
+  // 全カードで共通の「この気分に合う/合わない」セクション
+  const renderMoodFeedback = (placeName: string) => {
+    const verdict = placeRatings[placeName];
+    if (verdict) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "16px", background: verdict === "good" ? "#e9f8ef" : "#fce4e4", border: `1px solid ${verdict === "good" ? "#bfe7cc" : "#f5c0c8"}`, fontSize: "13px", fontWeight: 800, color: verdict === "good" ? "#18794e" : "#c0385a", marginTop: "12px" }}>
+          {verdict === "good" ? "👍 気になる！AIが覚えました" : "👎 興味なし。次回から除外します"}
+        </div>
+      );
+    }
+    return (
+      <div style={{ borderTop: "1px solid #f5e8eb", paddingTop: "12px", marginTop: "12px" }}>
+        <div style={{ fontSize: "13px", fontWeight: 800, color: "#7a5860", marginBottom: "8px", textAlign: "center" }}>
+          {selectedMood ? `「${selectedMood}」の気分の時にこの場所は？` : "この気分の時にこの場所は？"}
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => submitPlaceRating(placeName, "good")} style={{ flex: 1, height: "44px", borderRadius: "999px", border: "1.5px solid #bfe7cc", background: "#e9f8ef", color: "#18794e", fontSize: "16px", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            👍 この気分に合う
+          </button>
+          <button onClick={() => submitPlaceRating(placeName, "bad")} style={{ flex: 1, height: "44px", borderRadius: "999px", border: "1.5px solid #f5c0c8", background: "#fce4e4", color: "#c0385a", fontSize: "16px", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            👎 この気分には合わない
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const userPreferences = useMemo(() => {
@@ -3152,23 +3324,16 @@ export default function Home() {
                             boxShadow: "0 6px 16px rgba(74,48,52,0.16)",
                           }}
                         >{favorited ? "♥" : "♡"}</button>
-                        {/* 非表示ボタン（左上） */}
+                        {/* 報告ボタン（左上） */}
                         <button
-                          onClick={() => {
-                            if (window.confirm(`「${rec.title}」を今後の結果から除外しますか？`)) {
-                              blockPlace(rec.title);
-                            }
-                          }}
+                          onClick={() => { setReportingSpot({ title: rec.title, address: rec.address ?? "" }); setReportReason(""); setReportNote(""); setReportDone(false); }}
                           style={{
                             position: "absolute", top: "12px", left: "12px",
                             height: "28px", padding: "0 9px", borderRadius: "999px",
-                            border: "none", background: "rgba(0,0,0,0.5)", color: "#fff",
+                            border: "none", background: "rgba(220,38,38,0.82)", color: "#fff",
                             fontSize: "11px", fontWeight: 700, cursor: "pointer",
-                            display: "flex", alignItems: "center", gap: "3px",
-                            backdropFilter: "blur(4px)",
                           }}
-                          aria-label="結果から除外"
-                        >🚫 {lang === "en" ? "Hide" : "非表示"}</button>
+                        >🚩 {lang === "en" ? "Report" : "報告"}</button>
                       </div>
 
                       {/* カード本文 */}
@@ -3784,33 +3949,7 @@ export default function Home() {
                 justifyContent: "space-between",
               }}
             >
-              <span>{step <= 10 ? (() => {
-                // まったりしたい + 温泉・スパ: step9→7, step7→8, step10→9
-                if (selectedMood === "まったりしたい" && (dynamicAnswers["relax_place"] ?? "").includes("温泉")) {
-                  if (step === 9)  return "7 / 10";
-                  if (step === 7)  return "8 / 10";
-                  if (step === 10) return "9 / 10";
-                }
-                // まったりしたい + カフェ: step8(距離)→7, step9(サブカテゴリ)→8, step7(自由ワード)→9
-                if (selectedMood === "まったりしたい" && (dynamicAnswers["relax_place"] ?? "").includes("カフェ")) {
-                  if (step === 8)  return "7 / 10";
-                  if (step === 9)  return "8 / 10";
-                  if (step === 7)  return "9 / 10";
-                  if (step === 10) return "10 / 10";
-                }
-                // わいわい楽しみたい: step8(サブカテゴリ)→7, step7(自由ワード)→8
-                if (selectedMood === "わいわい楽しみたい") {
-                  if (step === 8)  return "7 / 10";
-                  if (step === 7)  return "8 / 10";
-                  if (step === 10) return "9 / 10";
-                }
-                // お腹すいた / まったりしたい: step8(サブ質問)→7、step7(自由ワード)→8 と表示
-                if (selectedMood === "お腹すいた" || selectedMood === "まったりしたい") {
-                  if (step === 8) return "7 / 10";
-                  if (step === 7) return "8 / 10";
-                }
-                return `${step} / 10`;
-              })() : (lang === "en" ? "Results" : "結果")}</span>
+              <span>{step >= 10 ? (lang === "en" ? "Results" : "結果") : (getProgressLabel() ?? "")}</span>
               <button
                 onClick={() => setLang(lang === "ja" ? "en" : "ja")}
                 style={{
@@ -5774,6 +5913,7 @@ export default function Home() {
                                       {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                     </button>
                                   </div>
+                                  {renderMoodFeedback(item.title)}
                                 </div>
                               </div>
                             );
@@ -5887,6 +6027,7 @@ export default function Home() {
                                   {visitedPlaces.includes(fac.name) ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(fac.name)}
                             </div>
                           </div>
                         );
@@ -5982,6 +6123,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6077,6 +6219,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6192,6 +6335,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6288,6 +6432,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6383,6 +6528,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6478,6 +6624,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6576,6 +6723,7 @@ export default function Home() {
                                   {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                 </button>
                               </div>
+                              {renderMoodFeedback(item.title)}
                             </div>
                           </div>
                         );
@@ -6714,6 +6862,7 @@ export default function Home() {
                                     {visited ? "✅ 行った！" : "🗺️ 行った！"}
                                   </button>
                                 </div>
+                                {renderMoodFeedback(item.title)}
                               </div>
                             </div>
                           );
@@ -7051,13 +7200,9 @@ export default function Home() {
                               {favorited ? "♥" : "♡"}
                             </button>
 
-                            {/* 非表示ボタン（左上） */}
+                            {/* 報告ボタン（左上） */}
                             <button
-                              onClick={() => {
-                                if (window.confirm(`「${item.title}」を今後の結果から除外しますか？`)) {
-                                  blockPlace(item.title);
-                                }
-                              }}
+                              onClick={() => { setReportingSpot({ title: item.title, address: item.address ?? "" }); setReportReason(""); setReportNote(""); setReportDone(false); }}
                               style={{
                                 position: "absolute",
                                 top: "14px",
@@ -7066,19 +7211,14 @@ export default function Home() {
                                 padding: "0 10px",
                                 borderRadius: "999px",
                                 border: "none",
-                                background: "rgba(0,0,0,0.5)",
+                                background: "rgba(220,38,38,0.82)",
                                 color: "#fff",
                                 fontSize: "11px",
                                 fontWeight: 700,
                                 cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                backdropFilter: "blur(4px)",
                               }}
-                              aria-label="結果から除外"
                             >
-                              🚫 {lang === "en" ? "Hide" : "非表示"}
+                              🚩 {lang === "en" ? "Report" : "報告"}
                             </button>
                             {visitedItem && <div style={{ position: "absolute", top: "14px", right: "70px", background: "#16a34a", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "12px", fontWeight: 900 }}>済</div>}
 
@@ -7386,207 +7526,91 @@ export default function Home() {
                 </div>
 
 
-                {/* リファインメント（再絞り込み） */}
-                <div
-                  ref={resultsBottomRef}
-                  style={{
-                    background: "#fffaf8",
-                    borderRadius: "24px",
-                    padding: "20px",
-                    border: "1px solid #f0dfe3",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <div style={{ fontWeight: 900, fontSize: "15px", marginBottom: "10px", color: "#4a3034" }}>
-                    🔄 {lang === "en" ? "Refine results" : "結果を絞り込む"}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#9b7b82", marginBottom: "10px" }}>
-                    {lang === "en"
-                      ? "Want something different? Tell us more and we'll search again."
-                      : "「もっと屋内にして」「駅近で」「1000円以内で」など自由に入力できます"}
-                  </div>
-                  <textarea
-                    value={refinementText}
-                    onChange={(e) => setRefinementText(e.target.value)}
-                    placeholder={lang === "en" ? "e.g. indoors only, closer to station, under ¥1000..." : "例：もっと静かな場所で、駅近で、無料で楽しめる場所..."}
-                    rows={2}
-                    style={{
-                      width: "100%",
-                      borderRadius: "14px",
-                      border: "1px solid #ead7db",
-                      padding: "10px 14px",
-                      fontSize: "14px",
-                      outline: "none",
-                      background: "#fff",
-                      resize: "none",
-                      boxSizing: "border-box",
-                      fontFamily: '"Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif',
-                      marginBottom: "10px",
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      if (refinementText.trim()) openResults(refinementText.trim());
-                    }}
-                    disabled={isLoadingRecommendations || !refinementText.trim()}
-                    style={{
-                      width: "100%",
-                      height: "46px",
-                      borderRadius: "999px",
-                      border: "none",
-                      background: refinementText.trim()
-                        ? "linear-gradient(135deg, #ffbf67 0%, #ff8f7f 100%)"
-                        : "#e8dfe0",
-                      color: refinementText.trim() ? "#fff" : "#bba8aa",
-                      fontSize: "14px",
-                      fontWeight: 900,
-                      cursor: refinementText.trim() ? "pointer" : "default",
-                      boxShadow: refinementText.trim() ? "0 6px 16px rgba(255,143,127,0.28)" : "none",
-                    }}
-                  >
-                    {isRefining
-                      ? (lang === "en" ? "Searching..." : "絞り込み中...")
-                      : (lang === "en" ? "Search again 🚀" : "もう一度探す 🚀")}
-                  </button>
-                </div>
-
-                {/* Feedback section */}
-                {!feedbackSubmitted ? (
-                  <div
-                    style={{
-                      background: "#fffaf8",
-                      borderRadius: "24px",
-                      padding: "20px",
-                      border: "1px solid #f0dfe3",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <div style={{ fontWeight: 900, fontSize: "16px", marginBottom: "14px" }}>
-                      💬 {lang === "en" ? "How were these results?" : "この結果はどうでしたか？"}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "center" }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onClick={() => setFeedbackRating(star)}
-                          style={{
-                            width: "48px",
-                            height: "48px",
-                            borderRadius: "999px",
-                            border: feedbackRating === star ? "2px solid #ff8fa5" : "1px solid #ead7db",
-                            background: feedbackRating !== null && star <= feedbackRating ? "#ffe3e8" : "#fff",
-                            fontSize: "22px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {star <= (feedbackRating ?? 0) ? "⭐" : "☆"}
-                        </button>
-                      ))}
-                    </div>
-                    {feedbackRating !== null && (
-                      <button
-                        onClick={() => {
-                          const newFeedback: FeedbackItem = {
-                            id: `${Date.now()}`,
-                            answers: {
-                              mood: answers.mood,
-                              area: answers.area,
-                              age: answers.age,
-                              gender: answers.gender,
-                              companion: answers.companion,
-                              transport: answers.transport,
-                              atmosphere: answers.atmosphere,
-                                                    freeWord: answers.freeWord,
-                              dynamicQ1: answers.dynamicQ1,
-                              dynamicQ2: answers.dynamicQ2,
-                              dynamicQ3: answers.dynamicQ3,
-                            },
-                            topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
-                            rating: feedbackRating,
-                            visitedPlace: "",
-                            createdAt: new Date().toISOString(),
-                          };
-                          const updated = [newFeedback, ...pastFeedback].slice(0, 50);
-                          setPastFeedback(updated);
-                          if (typeof window !== "undefined") {
-                            window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify(updated));
-                            // 全員に次回「どこに行ったか」を聞く
-                            window.localStorage.setItem(PENDING_VISITED_KEY, JSON.stringify(newFeedback));
-                            setPendingVisited(newFeedback);
-                          }
-                          // Supabase にも送信（失敗しても続行）
-                          fetch("/api/feedback", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              mood: answers.mood,
-                              area: answers.area,
-                              age: answers.age,
-                              gender: answers.gender,
-                              companion: answers.companion,
-                              atmosphere: answers.atmosphere,
-                                                    topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
-                              rating: feedbackRating,
-                              visitedPlace: "",
-                              likedPlaces: likedInSession,
-                              mapClickedPlaces: mapClickedInSession,
-                            }),
-                          }).catch(() => {});
-                          setFeedbackSubmitted(true);
-                        }}
-                        style={{
-                          width: "100%",
-                          height: "48px",
-                          borderRadius: "999px",
-                          border: "none",
-                          background: "linear-gradient(135deg, #ffbf67 0%, #ff8f7f 100%)",
-                          color: "#ffffff",
-                          fontSize: "15px",
-                          fontWeight: 900,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {lang === "en" ? "Submit" : "送信する"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      background: "#e9f8ef",
-                      borderRadius: "18px",
-                      padding: "14px 18px",
-                      border: "1px solid #bfe7cc",
-                      marginBottom: "20px",
-                      fontSize: "14px",
-                      color: "#18794e",
-                      fontWeight: 800,
-                      textAlign: "center",
-                    }}
-                  >
-                    ✅ {lang === "en" ? "Thanks for your feedback! We'll use it to improve future suggestions." : "フィードバックありがとうございます！次回の提案に活かします。"}
-                  </div>
-                )}
-
-                <div style={{ display: "flex", gap: "12px" }}>
-                  <button onClick={() => setStep(1)} style={{ ...secondaryButtonStyle, flex: 1 }}>
-                    {lang === "en" ? "Adjust selections" : "条件を見直す"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setApiRecommendations([]);
-                      setApiWarning("");
-                      setLocationError("");
-                      setStarted(false);
-                      setStep(1);
-                    }}
-                    style={{ ...primaryButtonStyle, flex: 1 }}
-                  >
-                    {lang === "en" ? "Back to home" : "ホームに戻る"}
-                  </button>
-                </div>
                   </>
                 )} {/* end !onsenFacilities wrapper */}
+
+                {/* ── 共通フッター: 全結果タイプに表示 ── */}
+                {!isLoadingRecommendations && !isLoadingNature && !isLoadingCafe && !isLoadingOnsen && !isLoadingWaiWai && !isLoadingDrive && !isLoadingFocus && !isLoadingSports && !isLoadingTravel && !isLoadingRandom && (
+                  <>
+                    {/* ⭐ フィードバック */}
+                    {!feedbackSubmitted ? (
+                      <div style={{ background: "#fffaf8", borderRadius: "24px", padding: "20px", border: "1px solid #f0dfe3", marginBottom: "20px" }}>
+                        <div style={{ fontWeight: 900, fontSize: "16px", marginBottom: "14px" }}>
+                          💬 {lang === "en" ? "How were these results?" : "この結果はどうでしたか？"}
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "center" }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={() => setFeedbackRating(star)}
+                              style={{ width: "48px", height: "48px", borderRadius: "999px", border: feedbackRating === star ? "2px solid #ff8fa5" : "1px solid #ead7db", background: feedbackRating !== null && star <= feedbackRating ? "#ffe3e8" : "#fff", fontSize: "22px", cursor: "pointer" }}
+                            >
+                              {star <= (feedbackRating ?? 0) ? "⭐" : "☆"}
+                            </button>
+                          ))}
+                        </div>
+                        {feedbackRating !== null && (
+                          <button
+                            onClick={() => {
+                              const newFeedback: FeedbackItem = {
+                                id: `${Date.now()}`,
+                                answers: { mood: answers.mood, area: answers.area, age: answers.age, gender: answers.gender, companion: answers.companion, transport: answers.transport, atmosphere: answers.atmosphere, freeWord: answers.freeWord, dynamicQ1: answers.dynamicQ1, dynamicQ2: answers.dynamicQ2, dynamicQ3: answers.dynamicQ3 },
+                                topRecommendations: recommendations.slice(0, 3).map((r) => r.title),
+                                rating: feedbackRating,
+                                visitedPlace: "",
+                                createdAt: new Date().toISOString(),
+                              };
+                              const updated = [newFeedback, ...pastFeedback].slice(0, 50);
+                              setPastFeedback(updated);
+                              if (typeof window !== "undefined") {
+                                window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify(updated));
+                                window.localStorage.setItem(PENDING_VISITED_KEY, JSON.stringify(newFeedback));
+                                setPendingVisited(newFeedback);
+                              }
+                              fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mood: answers.mood, area: answers.area, age: answers.age, gender: answers.gender, companion: answers.companion, atmosphere: answers.atmosphere, topRecommendations: recommendations.slice(0, 3).map((r) => r.title), rating: feedbackRating, visitedPlace: "", likedPlaces: likedInSession, mapClickedPlaces: mapClickedInSession }) }).catch(() => {});
+                              setFeedbackSubmitted(true);
+                            }}
+                            style={{ width: "100%", height: "48px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg, #ffbf67 0%, #ff8f7f 100%)", color: "#ffffff", fontSize: "15px", fontWeight: 900, cursor: "pointer" }}
+                          >
+                            {lang === "en" ? "Submit" : "送信する"}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ background: "#e9f8ef", borderRadius: "18px", padding: "14px 18px", border: "1px solid #bfe7cc", marginBottom: "20px", fontSize: "14px", color: "#18794e", fontWeight: 800, textAlign: "center" }}>
+                        ✅ {lang === "en" ? "Thanks for your feedback!" : "フィードバックありがとうございます！次回の提案に活かします。"}
+                      </div>
+                    )}
+
+                    {/* ナビゲーション */}
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <button onClick={() => setStep(1)} style={{ ...secondaryButtonStyle, flex: 1 }}>
+                        {lang === "en" ? "Adjust selections" : "条件を見直す"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setApiRecommendations([]);
+                          setNatureFacilities(null);
+                          setCafeFacilities(null);
+                          setOnsenFacilities(null);
+                          setWaiWaiFacilities(null);
+                          setDriveFacilities(null);
+                          setFocusFacilities(null);
+                          setSportsFacilities(null);
+                          setTravelFacilities(null);
+                          setRandomFacilities(null);
+                          setApiWarning("");
+                          setLocationError("");
+                          setStarted(false);
+                          setStep(1);
+                        }}
+                        style={{ ...primaryButtonStyle, flex: 1 }}
+                      >
+                        {lang === "en" ? "Back to home" : "ホームに戻る"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

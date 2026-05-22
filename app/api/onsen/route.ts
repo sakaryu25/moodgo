@@ -110,6 +110,39 @@ export async function POST(req: NextRequest) {
 
     console.log(`[onsen] ▶ ${config.label} (${originLat.toFixed(4)},${originLng.toFixed(4)}) r=${radiusKm}km [${coordSource}]`);
 
+    // ─── Supabase-first（登録スポットを優先） ────────────────────────────
+    if (googleKey) {
+      try {
+        const { searchPlacesByTags } = await import("@/lib/supabase-places");
+        const { getOnsenTags } = await import("@/lib/mood-tag-map");
+        const tagResult = getOnsenTags(category);
+        const sbResults = await searchPlacesByTags({
+          mustTags: tagResult.tags,
+          fallbackTags: tagResult.fallback,
+          orTags: tagResult.orTags,
+          lat: originLat,
+          lng: originLng,
+          radiusKm: tagResult.radiusKm,
+          transport,
+          limit: 20,
+          googleApiKey: googleKey,
+        });
+        if (sbResults.length >= 3) {
+          console.log(`[onsen] Supabase ${sbResults.length}件 → 早期リターン`);
+          const aiDesc = buildDescription({ config, transport, time, companion, budget, freeWord });
+          return NextResponse.json({
+            data: shuffleArray(sbResults),
+            categoryLabel: config.label,
+            areaLabel,
+            aiDescription: aiDesc,
+          } satisfies OnsenApiResponse);
+        }
+        console.log(`[onsen] Supabase ${sbResults.length}件 → Yahoo/Google Placesにフォールバック`);
+      } catch (e) {
+        console.warn("[onsen] Supabase-first error:", e);
+      }
+    }
+
     const aiDesc = buildDescription({ config, transport, time, companion, budget, freeWord });
 
     // ── STEP 2: Yahoo Local Search ──────────────────────────────────────────
@@ -147,8 +180,8 @@ export async function POST(req: NextRequest) {
     }
 
     // マージ・重複除去（Google直接 → Yahoo補完の順で優先）
-    const places = mergePlaces(yahooEnriched, googleDirect);
-    console.log(`[onsen] 最終 ${places.length}件`);
+    const places = shuffleArray(mergePlaces(yahooEnriched, googleDirect));
+    console.log(`[onsen] 最終 ${places.length}件（シャッフル済み）`);
 
     return NextResponse.json({
       data:          places,
@@ -740,4 +773,14 @@ async function fetchNearestStation(lat: number, lng: number, googleKey: string):
   } catch {
     return null;
   }
+}
+
+/** Fisher-Yates シャッフル（結果のワンパターン化防止） */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

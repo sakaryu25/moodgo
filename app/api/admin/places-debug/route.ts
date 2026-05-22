@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   }));
 
   // タグ検索テスト（主要タグ）
-  const testTags = ["#温泉", "#天然温泉", "#銭湯", "#サウナ", "#癒しカフェ", "#自然の中", "#大型公園"];
+  const testTags = ["#温泉", "#サウナ", "#癒しカフェ", "#自然の中", "#大型公園"];
   const tagTests: Record<string, number> = {};
   for (const tag of testTags) {
     const { count } = await supabase

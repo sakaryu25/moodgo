@@ -647,6 +647,35 @@ export async function POST(req: NextRequest) {
 
     console.log(`[waiwai] ▶ ${meta.label} area="${area.trim()}" age=${age ?? "未設定"} teen=${isTeen} yahooR=${yahooDistKm}km googleR=${googleRadiusM/1000}km hpRange=${hpRange}`);
 
+    // ─── Supabase-first（登録スポットを優先） ────────────────────────────
+    try {
+      const { searchPlacesByTags } = await import("@/lib/supabase-places");
+      const { getWaiWaiTags } = await import("@/lib/mood-tag-map");
+      const tagResult = getWaiWaiTags(subCategory);
+      const sbResults = await searchPlacesByTags({
+        mustTags: tagResult.tags,
+        fallbackTags: tagResult.fallback,
+        orTags: tagResult.orTags,
+        lat: searchLat,
+        lng: searchLng,
+        radiusKm: tagResult.radiusKm,
+        transport,
+        limit: 20,
+        googleApiKey: googleKey,
+      });
+      if (sbResults.length >= 3) {
+        console.log(`[waiwai] Supabase ${sbResults.length}件 → 早期リターン`);
+        return NextResponse.json({
+          data: shuffleArray(sbResults),
+          subCategoryLabel: meta.label,
+          areaLabel: area.trim(),
+        } satisfies WaiWaiApiResponse);
+      }
+      console.log(`[waiwai] Supabase ${sbResults.length}件 → Google Placesにフォールバック`);
+    } catch (e) {
+      console.warn("[waiwai] Supabase-first error:", e);
+    }
+
     let places: PlaceResponse[] = [];
 
     // ── Yahoo!ローカルサーチ ──────────────────────────────────────────────
@@ -801,7 +830,9 @@ export async function POST(req: NextRequest) {
       console.log(`[waiwai] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
     }
 
-    console.log(`[waiwai] 最終 ${places.length}件`);
+    // ── 結果をシャッフル（ワンパターン化防止）─────────────────────────────
+    places = shuffleArray(places);
+    console.log(`[waiwai] 最終 ${places.length}件（シャッフル済み）`);
 
     return NextResponse.json({
       data:             places,
@@ -881,4 +912,15 @@ function compactWeekdays(weekdays: string[]): string {
                               `${s}〜${e}`;
     return `${dayStr}: ${g.hours}`;
   }).join("\n");
+}
+
+
+/** Fisher-Yates シャッフル（結果のワンパターン化防止） */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

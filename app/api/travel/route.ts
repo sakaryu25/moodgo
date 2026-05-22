@@ -639,6 +639,35 @@ export async function POST(req: NextRequest) {
       ` transport="${Array.isArray(transport) ? transport.join(",") : (transport ?? "なし")}"`
     );
 
+    // ─── Supabase-first（登録スポットを優先） ────────────────────────────
+    try {
+      const { searchPlacesByTags } = await import("@/lib/supabase-places");
+      const { getTravelTags } = await import("@/lib/mood-tag-map");
+      const tagResult = getTravelTags(subCategory);
+      const sbResults = await searchPlacesByTags({
+        mustTags: tagResult.tags,
+        fallbackTags: tagResult.fallback,
+        orTags: tagResult.orTags,
+        lat: originLat,
+        lng: originLng,
+        radiusKm: tagResult.radiusKm,
+        transport,
+        limit: 20,
+        googleApiKey: googleKey,
+      });
+      if (sbResults.length >= 3) {
+        console.log(`[travel] Supabase ${sbResults.length}件 → 早期リターン`);
+        return NextResponse.json({
+          data: shuffleArray(sbResults),
+          subCategoryLabel: config.label,
+          areaLabel,
+        } satisfies TravelApiResponse);
+      }
+      console.log(`[travel] Supabase ${sbResults.length}件 → Google Placesにフォールバック`);
+    } catch (e) {
+      console.warn("[travel] Supabase-first error:", e);
+    }
+
     let places: PlaceResponse[];
     if (config.api === "google") {
       places = await runGoogleFallback(config, originLat, originLng, donut, googleKey, transport);
@@ -654,10 +683,12 @@ export async function POST(req: NextRequest) {
       return rest as PlaceResponse;
     });
 
-    console.log(`[travel] 最終 ${cleaned.length}件`);
+    // ── 結果をシャッフル（ワンパターン化防止）─────────────────────────────
+    const shuffled = shuffleArray(cleaned);
+    console.log(`[travel] 最終 ${shuffled.length}件（シャッフル済み）`);
 
     return NextResponse.json({
-      data:             cleaned,
+      data:             shuffled,
       subCategoryLabel: config.label,
       areaLabel,
     } satisfies TravelApiResponse);
@@ -725,4 +756,15 @@ function compactWeekdays(weekdays: string[]): string {
     const dayStr = g.start === g.end ? s : g.end - g.start === 1 ? `${s}・${e}` : `${s}〜${e}`;
     return `${dayStr}: ${g.hours}`;
   }).join("\n");
+}
+
+
+/** Fisher-Yates シャッフル（結果のワンパターン化防止） */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

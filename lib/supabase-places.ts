@@ -58,10 +58,10 @@ function formatDistance(m: number, transport: string): string {
     speedKmh = 30; mode = "電車";
   } else if (t.includes("自転車") || t.includes("bicycle")) {
     speedKmh = 12; mode = "自転車";
-  } else if (t.includes("徒歩") || t.includes("walk")) {
-    speedKmh = 4;  mode = "徒歩";
+  } else if (t.includes("徒歩") || t.includes("歩き") || t.includes("walk")) {
+    speedKmh = 4;  mode = "歩き";
   } else {
-    speedKmh = 30; mode = "電車";
+    speedKmh = 40; mode = "車"; // デフォルト（なんでも相当）
   }
   const mins = Math.round((km / speedKmh) * 60);
   if (mins < 60) return `${mode}で約${mins}分 / ${km.toFixed(1)}km`;
@@ -272,6 +272,7 @@ function getTransportMaxRadius(transport: string): number {
 export interface SearchPlacesOptions {
   mustTags: string[];          // すべて含む場所のみ（@>）
   fallbackTags?: string[];     // mustTags がヒット0件時の緩いタグ
+  orTags?: string[];           // いずれかを含む場所（overlaps）
   lat?: number;
   lng?: number;
   radiusKm?: number;           // 半径フィルター（省略時: 10km）
@@ -309,6 +310,7 @@ export async function searchPlacesByTags(
   const {
     mustTags: mustTagsInput,
     fallbackTags = [],
+    orTags,
     lat = 0,
     lng = 0,
     radiusKm = 10,
@@ -343,7 +345,9 @@ export async function searchPlacesByTags(
 
   // ── 大量プール取得（距離拡張のために多めに取得）──────────────────────
   const fetchLimit = Math.max(limit * 10, 200);
-  let places = await queryByTags(mustTags, fetchLimit, prefecture);
+  let places = orTags && orTags.length > 0
+    ? await queryByOrTags(orTags, fetchLimit, prefecture)
+    : await queryByTags(mustTags, fetchLimit, prefecture);
 
   // ── fallbackTags で再検索 ────────────────────────────────────────────
   if (places.length === 0 && fallbackTags.length > 0 && fallbackTags.join() !== mustTags.join()) {
@@ -475,6 +479,25 @@ async function queryByTags(tags: string[], limit: number, prefecture?: string): 
   const { data, error } = await query;
   if (error) {
     console.error("[supabase-places] queryByTags error:", error.message);
+    return [];
+  }
+  return (data ?? []) as SupabasePlace[];
+}
+
+async function queryByOrTags(tags: string[], limit: number, prefecture?: string): Promise<SupabasePlace[]> {
+  if (!supabase || tags.length === 0) return [];
+  let query = supabase
+    .from("places")
+    .select("*")
+    .eq("is_active", true)
+    .overlaps("tags", tags)
+    .limit(limit);
+  if (prefecture) {
+    query = query.ilike("address", `%${prefecture}%`);
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error("[supabase-places] queryByOrTags error:", error.message);
     return [];
   }
   return (data ?? []) as SupabasePlace[];

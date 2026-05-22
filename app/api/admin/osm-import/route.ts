@@ -178,7 +178,7 @@ function osmToMoodgoTags(osmTags: Record<string, string>, typeConfigs: OsmTypeCo
   if (/寺|temple|仏/.test(name))        { tags.add("#パワースポット"); }
   if (/温泉|onsen/.test(name))          { tags.add("#温泉"); tags.add("#まったりしたい"); }
   if (/サウナ|sauna/.test(name))        { tags.add("#サウナ"); }
-  if (/銭湯/.test(name))                { tags.add("#銭湯"); tags.add("#まったりしたい"); }
+  if (/銭湯/.test(name))                { tags.add("#温泉"); tags.add("#まったりしたい"); }
   if (/公園|park/.test(name))           { tags.add("#大型公園"); tags.add("#自然感じたい"); }
   if (/展望|パノラマ|panorama/.test(name)) { tags.add("#絶景スポット"); tags.add("#展望台"); }
   if (/海|beach|浜/.test(name))         { tags.add("#海辺"); tags.add("#自然感じたい"); }

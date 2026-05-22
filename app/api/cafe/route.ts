@@ -978,7 +978,9 @@ export async function POST(req: NextRequest) {
       console.log(`[cafe] 予算フィルタ後 ${places.length}件（上限 ${budget}円）`);
     }
 
-    console.log(`[cafe] 最終 ${places.length}件`);
+    // ── 結果をシャッフル（ワンパターン化防止）─────────────────────────────
+    places = shuffleArray(places);
+    console.log(`[cafe] 最終 ${places.length}件（シャッフル済み）`);
 
     return NextResponse.json({
       data:               places,
@@ -1058,4 +1060,15 @@ function compactWeekdays(weekdays: string[]): string {
                               `${s}〜${e}`;
     return `${dayStr}: ${g.hours}`;
   }).join("\n");
+}
+
+
+/** Fisher-Yates シャッフル（結果のワンパターン化防止） */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }

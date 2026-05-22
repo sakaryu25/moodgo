@@ -145,7 +145,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
   {
     label: "#温泉 深掘り",
     key: "onsenSub",
-    tags: ["#温泉", "#サウナ"],
+    tags: ["#温泉", "#サウナ", "#岩盤浴"],
   },
   {
     label: "#絶景スポット 深掘り",
@@ -177,7 +177,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
   {
     label: "#集中したい 深掘り",
     key: "focusSub",
-    tags: ["#カフェ作業", "#勉強場", "#ファミレス"],
+    tags: ["#カフェ作業", "#勉強場", "#ファミレス", "#book場"],
   },
   {
     label: "#体動かしたい 深掘り",

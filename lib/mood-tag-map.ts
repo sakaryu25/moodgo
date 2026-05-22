@@ -20,6 +20,8 @@ export interface SubcategoryTagsResult {
   label: string;
   /** 検索半径 km */
   radiusKm: number;
+  /** いずれかを含む場所（overlaps）- 指定時はmustTagsの代わりにOR検索 */
+  orTags?: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,7 +37,7 @@ export function getOnsenTags(category: OnsenCategory | null): SubcategoryTagsRes
     case "super_sento":
       return { tags: ["#温泉"],   fallback: fallbackBase, label: "スーパー銭湯・健康ランド", radiusKm: 20 };
     case "sauna_ganban":
-      return { tags: ["#サウナ"], fallback: fallbackBase, label: "サウナ・岩盤浴",            radiusKm: 15 };
+      return { tags: ["#サウナ"], fallback: fallbackBase, label: "サウナ・岩盤浴",            radiusKm: 15, orTags: ["#サウナ", "#岩盤浴"] };
     default:
       return { tags: fallbackBase, fallback: fallbackBase, label: "温泉施設全般",             radiusKm: 20 };
   }
@@ -81,11 +83,11 @@ export function getNatureTags(
     case "ocean":
       return { tags: ["#海辺"],         fallback: fallbackBase, label: "🌊 波の音と海風",         radiusKm: 25 };
     case "forest":
-      return { tags: ["#自然公園"],     fallback: fallbackBase, label: "🌳 森の中で深呼吸",       radiusKm: 20 };
+      return { tags: ["#自然公園"],     fallback: fallbackBase, label: "🌳 森の中で深呼吸",       radiusKm: 20, orTags: ["#自然公園", "#大型公園"] };
     case "park":
       return { tags: ["#大型公園"],     fallback: fallbackBase, label: "🧺 広い芝生でゴロゴロ",   radiusKm: 15 };
     case "view":
-      return { tags: ["#絶景スポット"], fallback: fallbackBase, label: "🌅 圧倒的な絶景",         radiusKm: 30 };
+      return { tags: ["#絶景スポット"], fallback: fallbackBase, label: "🌅 圧倒的な絶景",         radiusKm: 30, orTags: ["#絶景スポット", "#展望台"] };
     default:
       return { tags: fallbackBase,      fallback: fallbackBase, label: "自然スポット",             radiusKm: 20 };
   }
@@ -98,15 +100,15 @@ export function getWaiWaiTags(subCategory: WaiWaiSubCategory | null): Subcategor
   const fallbackBase = ["#わいわい楽しみたい"];
   switch (subCategory) {
     case "active":
-      return { tags: ["#体動かしたい"],   fallback: fallbackBase, label: "💪 体を動かしてはしゃぎたい",     radiusKm: 15 };
+      return { tags: ["#わいわい楽しみたい"], fallback: fallbackBase, label: "💪 体を動かしてはしゃぎたい",     radiusKm: 15, orTags: ["#わいわい楽しみたい", "#体動かしたい", "#アミューズメントパーク", "#体験型ゲーム", "#ボウリング"] };
     case "party":
-      return { tags: ["#カラオケ"],        fallback: fallbackBase, label: "🎤 歌って飲んで騒ぎたい",         radiusKm: 10 };
+      return { tags: ["#わいわい楽しみたい"],  fallback: fallbackBase, label: "🎤 歌って飲んで騒ぎたい",         radiusKm: 10, orTags: ["#わいわい楽しみたい", "#カラオケ", "#ビリヤード", "#ダーツ"] };
     case "experience":
-      return { tags: ["#体験型ゲーム"],   fallback: fallbackBase, label: "🎲 非日常の体験で盛り上がりたい", radiusKm: 15 };
+      return { tags: ["#わいわい楽しみたい"],  fallback: fallbackBase, label: "🎲 非日常の体験で盛り上がりたい", radiusKm: 15, orTags: ["#わいわい楽しみたい", "#体動かしたい", "#アミューズメントパーク", "#体験型ゲーム"] };
     case "food_drink":
-      return { tags: ["#居酒屋"],         fallback: fallbackBase, label: "🍻 ご飯とお酒でワイワイ",         radiusKm: 10 };
+      return { tags: ["#居酒屋"],              fallback: fallbackBase, label: "🍻 ご飯とお酒でワイワイ",         radiusKm: 10 };
     default:
-      return { tags: fallbackBase,        fallback: fallbackBase, label: "わいわいスポット",               radiusKm: 15 };
+      return { tags: fallbackBase,             fallback: fallbackBase, label: "わいわいスポット",               radiusKm: 15 };
   }
 }
 
@@ -119,7 +121,7 @@ export function getDriveTags(subCategory: DriveSubCategory | null): SubcategoryT
     case "ocean_drive":
       return { tags: ["#海辺"],          fallback: fallbackBase, label: "🌊 海沿いドライブ",           radiusKm: 80 };
     case "night_view":
-      return { tags: ["#絶景スポット", "#お散歩"],  fallback: fallbackBase, label: "🌉 夜景・絶景ドライブ",       radiusKm: 80 };
+      return { tags: ["#絶景スポット"], fallback: fallbackBase, label: "🌉 夜景・絶景ドライブ", radiusKm: 80, orTags: ["#絶景スポット", "#お散歩"] };
     case "road_station":
       return { tags: ["#ご当地グルメ"],  fallback: fallbackBase, label: "🏪 道の駅・ご当地グルメ",     radiusKm: 100 };
     case "outlet":
@@ -138,7 +140,7 @@ export function getFocusTags(subCategory: FocusSubCategory | null): SubcategoryT
     case "work_cafe":
       return { tags: ["#カフェ作業"], fallback: fallbackBase, label: "☕ カフェで作業",               radiusKm: 10 };
     case "coworking":
-      return { tags: ["#勉強場"],     fallback: fallbackBase, label: "🖥️ コワーキング・専用スペース", radiusKm: 15 };
+      return { tags: ["#勉強場"],     fallback: fallbackBase, label: "🖥️ コワーキング・専用スペース", radiusKm: 15, orTags: ["#集中したい", "#勉強場", "#book場"] };
     case "family_restaurant":
       return { tags: ["#ファミレス"], fallback: fallbackBase, label: "🍳 ファミレスで深夜まで粘る",   radiusKm: 10 };
     case "netcafe_library":
@@ -155,13 +157,13 @@ export function getSportsTags(subCategory: SportsSubCategory | null): Subcategor
   const fallbackBase = ["#体動かしたい"];
   switch (subCategory) {
     case "training":
-      return { tags: ["#ガッツリ運動"],  fallback: fallbackBase, label: "💪 がっつりトレーニング",         radiusKm: 15 };
+      return { tags: ["#ガッツリ運動"],  fallback: fallbackBase, label: "💪 がっつりトレーニング",         radiusKm: 15, orTags: ["#体動かしたい", "#ガッツリ運動", "#スポーツ", "#体験型ゲーム", "#屋外スポーツ"] };
     case "stress_relief":
       return { tags: ["#スポーツ"],      fallback: fallbackBase, label: "🏏 打って投げてストレス発散",      radiusKm: 15 };
     case "amusement_sport":
-      return { tags: ["#体験型ゲーム"],  fallback: fallbackBase, label: "🎯 遊び感覚でワイワイ体を動かす", radiusKm: 15 };
+      return { tags: ["#体験型ゲーム"],  fallback: fallbackBase, label: "🎯 遊び感覚でワイワイ体を動かす", radiusKm: 15, orTags: ["#わいわい楽しみたい", "#アミューズメントパーク", "#体験型ゲーム", "#テーマパーク"] };
     case "outdoor_sports":
-      return { tags: ["#屋外スポーツ"],  fallback: fallbackBase, label: "🌳 外でスポーツ",                 radiusKm: 25 };
+      return { tags: ["#屋外スポーツ"],  fallback: fallbackBase, label: "🌳 外でスポーツ",                 radiusKm: 25, orTags: ["#自然公園", "#大型公園", "#屋外スポーツ"] };
     default:
       return { tags: fallbackBase,       fallback: fallbackBase, label: "スポーツスポット",               radiusKm: 15 };
   }
@@ -178,9 +180,9 @@ export function getTravelTags(subCategory: TravelSubCategory | null): Subcategor
     case "theme_park":
       return { tags: ["#テーマパーク"],    fallback: fallbackBase, label: "🎡 テーマパーク・別世界",         radiusKm: 150 };
     case "town_walk":
-      return { tags: ["#お散歩"],          fallback: fallbackBase, label: "🚶 知らない街をぶらぶら",         radiusKm: 150 };
+      return { tags: ["#お散歩"],          fallback: fallbackBase, label: "🚶 知らない街をぶらぶら",         radiusKm: 150, orTags: ["#ご当地グルメ", "#お散歩"] };
     case "super_view":
-      return { tags: ["#絶景スポット"],    fallback: fallbackBase, label: "🌄 息を呑む絶景・大自然",         radiusKm: 150 };
+      return { tags: ["#絶景スポット"],    fallback: fallbackBase, label: "🌄 息を呑む絶景・大自然",         radiusKm: 150, orTags: ["#絶景スポット", "#展望台"] };
     default:
       return { tags: fallbackBase,         fallback: fallbackBase, label: "遠くのおでかけスポット",         radiusKm: 150 };
   }

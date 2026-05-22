@@ -125,7 +125,7 @@ function generateRuleBasedPredefinedTags(description: string, hintTags: string[]
   if (/絶景/i.test(d))                             tags.add("#絶景スポット");
   if (/カフェ|コーヒー|喫茶/i.test(d))             tags.add("#癒しカフェ");
   if (/温泉|スパ/i.test(d))                        tags.add("#温泉");
-  if (/銭湯/i.test(d))                             tags.add("#銭湯");
+  if (/銭湯/i.test(d))                             tags.add("#温泉");
   if (/サウナ/i.test(d))                           tags.add("#サウナ");
   if (/パワースポット|神社|仏閣|寺/i.test(d))      tags.add("#パワースポット");
   if (/テーマパーク|遊園地/i.test(d))              tags.add("#テーマパーク");

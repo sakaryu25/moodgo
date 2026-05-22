@@ -1,5 +1,5 @@
 // ─── 都道府県ユーティリティ ──────────────────────────────────────────────────
-// 都道府県の重心座標と近隣都道府県の計算
+// 都道府県の重心座標・実際の隣接マップ・近隣都道府県の計算
 
 export const PREFECTURES: { name: string; lat: number; lng: number }[] = [
   { name: "北海道", lat: 43.064, lng: 141.347 },
@@ -51,6 +51,58 @@ export const PREFECTURES: { name: string; lat: number; lng: number }[] = [
   { name: "沖縄県", lat: 26.212, lng: 127.681 },
 ];
 
+// ─── 実際の隣接都道府県マップ（陸続き・実際の境界線ベース）───────────────────
+// 地図上で実際に境界を接している都道府県を列挙
+export const ADJACENT_PREFECTURES: Record<string, string[]> = {
+  "北海道":   [],
+  "青森県":   ["岩手県", "秋田県"],
+  "岩手県":   ["青森県", "秋田県", "宮城県"],
+  "宮城県":   ["岩手県", "秋田県", "山形県", "福島県"],
+  "秋田県":   ["青森県", "岩手県", "宮城県", "山形県"],
+  "山形県":   ["秋田県", "宮城県", "福島県", "新潟県"],
+  "福島県":   ["宮城県", "山形県", "新潟県", "栃木県", "群馬県", "埼玉県", "茨城県"],
+  "茨城県":   ["福島県", "栃木県", "埼玉県", "千葉県"],
+  "栃木県":   ["福島県", "群馬県", "茨城県", "埼玉県"],
+  "群馬県":   ["福島県", "新潟県", "長野県", "埼玉県", "栃木県"],
+  "埼玉県":   ["群馬県", "栃木県", "茨城県", "千葉県", "東京都", "山梨県", "長野県", "福島県"],
+  "千葉県":   ["茨城県", "埼玉県", "東京都"],
+  "東京都":   ["埼玉県", "千葉県", "神奈川県", "山梨県"],
+  "神奈川県": ["東京都", "埼玉県", "山梨県", "静岡県"],
+  "新潟県":   ["山形県", "福島県", "群馬県", "長野県", "富山県"],
+  "富山県":   ["新潟県", "長野県", "岐阜県", "石川県"],
+  "石川県":   ["富山県", "岐阜県", "福井県"],
+  "福井県":   ["石川県", "岐阜県", "滋賀県", "京都府"],
+  "山梨県":   ["埼玉県", "東京都", "神奈川県", "静岡県", "長野県"],
+  "長野県":   ["新潟県", "群馬県", "埼玉県", "山梨県", "静岡県", "愛知県", "岐阜県", "富山県"],
+  "岐阜県":   ["富山県", "石川県", "福井県", "長野県", "愛知県", "三重県", "滋賀県"],
+  "静岡県":   ["神奈川県", "山梨県", "長野県", "愛知県"],
+  "愛知県":   ["静岡県", "長野県", "岐阜県", "三重県"],
+  "三重県":   ["愛知県", "岐阜県", "滋賀県", "奈良県", "和歌山県", "京都府"],
+  "滋賀県":   ["福井県", "岐阜県", "三重県", "京都府"],
+  "京都府":   ["福井県", "兵庫県", "大阪府", "奈良県", "三重県", "滋賀県"],
+  "大阪府":   ["京都府", "兵庫県", "奈良県", "和歌山県"],
+  "兵庫県":   ["京都府", "大阪府", "奈良県", "和歌山県", "岡山県", "鳥取県"],
+  "奈良県":   ["京都府", "大阪府", "兵庫県", "三重県", "和歌山県"],
+  "和歌山県": ["大阪府", "奈良県", "三重県", "兵庫県"],
+  "鳥取県":   ["兵庫県", "岡山県", "島根県"],
+  "島根県":   ["鳥取県", "岡山県", "広島県", "山口県"],
+  "岡山県":   ["鳥取県", "兵庫県", "広島県", "島根県"],
+  "広島県":   ["島根県", "岡山県", "山口県"],
+  "山口県":   ["島根県", "広島県"],
+  "徳島県":   ["香川県", "愛媛県", "高知県"],
+  "香川県":   ["徳島県", "愛媛県"],
+  "愛媛県":   ["香川県", "徳島県", "高知県"],
+  "高知県":   ["徳島県", "愛媛県"],
+  "福岡県":   ["佐賀県", "長崎県", "熊本県", "大分県"],
+  "佐賀県":   ["福岡県", "長崎県"],
+  "長崎県":   ["福岡県", "佐賀県"],
+  "熊本県":   ["福岡県", "大分県", "宮崎県", "鹿児島県"],
+  "大分県":   ["福岡県", "熊本県", "宮崎県"],
+  "宮崎県":   ["大分県", "熊本県", "鹿児島県"],
+  "鹿児島県": ["熊本県", "宮崎県"],
+  "沖縄県":   [],
+};
+
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -75,14 +127,69 @@ export function detectUserPrefecture(lat: number, lng: number): string {
   return best.name;
 }
 
-/** ユーザーの都道府県から近い順に隣県をN件返す（自県は除く） */
-export function getNearbyPrefectures(userPref: string, count = 3): string[] {
+/**
+ * ユーザーの実際のGPS座標から都道府県フィルターボタンリストを生成する。
+ *
+ * ロジック:
+ * 1. 隣接マップから実際に境界を接する都道府県を取得（順番は重心との距離順）
+ * 2. それでも6件未満なら GPS座標から近い順に補完
+ * 3. 自県を先頭に配置
+ */
+export function getPrefectureButtonList(
+  userLat: number,
+  userLng: number,
+  maxCount = 7,
+): string[] {
+  const userPref = detectUserPrefecture(userLat, userLng);
+  if (!userPref) return [];
+
+  // 実際の隣接県を重心距離順に並べる
+  const adjacent = (ADJACENT_PREFECTURES[userPref] ?? [])
+    .map(name => {
+      const p = PREFECTURES.find(x => x.name === name);
+      return p ? { name, dist: distKm(userLat, userLng, p.lat, p.lng) } : null;
+    })
+    .filter((x): x is { name: string; dist: number } => x !== null)
+    .sort((a, b) => a.dist - b.dist)
+    .map(x => x.name);
+
+  // 隣接県が少ない場合はGPS座標から近い順に補完
+  const result: string[] = [userPref, ...adjacent];
+  if (result.length < maxCount) {
+    const extras = PREFECTURES
+      .filter(p => !result.includes(p.name))
+      .map(p => ({ name: p.name, dist: distKm(userLat, userLng, p.lat, p.lng) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, maxCount - result.length)
+      .map(x => x.name);
+    result.push(...extras);
+  }
+
+  return result.slice(0, maxCount);
+}
+
+/** 後方互換用: 都道府県名から近隣県を返す（旧API） */
+export function getNearbyPrefectures(userPref: string, count = 5): string[] {
   const base = PREFECTURES.find(p => p.name === userPref);
   if (!base) return [];
-  return PREFECTURES
-    .filter(p => p.name !== userPref)
+  // 隣接マップ優先、不足分は距離で補完
+  const adjacent = (ADJACENT_PREFECTURES[userPref] ?? [])
+    .map(name => {
+      const p = PREFECTURES.find(x => x.name === name);
+      return p ? { name, dist: distKm(base.lat, base.lng, p.lat, p.lng) } : null;
+    })
+    .filter((x): x is { name: string; dist: number } => x !== null)
+    .sort((a, b) => a.dist - b.dist)
+    .map(x => x.name);
+
+  if (adjacent.length >= count) return adjacent.slice(0, count);
+
+  const extras = PREFECTURES
+    .filter(p => p.name !== userPref && !adjacent.includes(p.name))
     .map(p => ({ name: p.name, dist: distKm(base.lat, base.lng, p.lat, p.lng) }))
     .sort((a, b) => a.dist - b.dist)
-    .slice(0, count)
-    .map(p => p.name);
+    .slice(0, count - adjacent.length)
+    .map(x => x.name);
+
+  return [...adjacent, ...extras].slice(0, count);
 }
