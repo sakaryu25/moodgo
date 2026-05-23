@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/vitality-check",
+      "schedule": "0 18 * * *"
+    }
+  ]
+}

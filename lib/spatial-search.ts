@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { calcRadiusKm } from "@/lib/calc-radius";
 import type { PlaceResponse } from "@/types/onsen";
 import { searchPlacesByTags } from "@/lib/supabase-places";
+import { scheduleBackgroundVitalityCheck } from "@/lib/place-vitality-check";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RPC レスポンス型（supabase-postgis-migration.sql の戻り値と一致）
@@ -203,9 +204,19 @@ export async function spatialSearch(opts: SpatialSearchOptions): Promise<PlaceRe
         rows = [...far, ...near];
       }
 
-      return rows
-        .slice(0, limit)
-        .map(r => nearbyRowToPlaceResponse(r, transport));
+      const sliced = rows.slice(0, limit);
+
+      // 表示されたスポットをバックグラウンドで生存確認（UX に影響しない fire-and-forget）
+      if (googleApiKey) {
+        const supabaseIds = sliced
+          .map(r => r.id)
+          .filter(Boolean);
+        if (supabaseIds.length > 0) {
+          scheduleBackgroundVitalityCheck(supabaseIds, googleApiKey, 3000);
+        }
+      }
+
+      return sliced.map(r => nearbyRowToPlaceResponse(r, transport));
     }
   }
 
