@@ -124,7 +124,12 @@ async function fetchAllShopsForPoint(
   return allShops;
 }
 
-// ── Supabase upsert（重複はhotpepper_idで判定） ───────────────────────────────
+// ── 住所の正規化（スペース除去・都道府県以降を比較用に短縮） ───────────────────
+function normalizeAddress(addr: string): string {
+  return addr.replace(/\s+/g, "").substring(0, 30);
+}
+
+// ── Supabase upsert（① hotpepper_id → ② 名前+住所 の2段階重複チェック） ───────
 async function upsertShops(
   shops: HotPepperShop[],
   config: (typeof SYNC_GENRE_CONFIGS)[number],
@@ -134,14 +139,34 @@ async function upsertShops(
 
   let inserted = 0, updated = 0, skipped = 0;
 
-  // 重複チェック用にバッチでIDを確認
+  // ── STEP 1: hotpepper_id で既存レコードを確認 ─────────────────────────────
   const shopIds = shops.map(s => s.id);
-  const { data: existing } = await supabase
+  const { data: existingById } = await supabase
     .from("places")
-    .select("id, hotpepper_id, tags")
+    .select("id, hotpepper_id, name, address, tags")
     .in("hotpepper_id", shopIds);
 
-  const existingMap = new Map((existing ?? []).map(e => [e.hotpepper_id, e]));
+  const byHotpepperId = new Map((existingById ?? []).map(e => [e.hotpepper_id, e]));
+
+  // ── STEP 2: hotpepper_id で見つからなかった店の名前リストで追加チェック ──
+  const notFoundByIdShops = shops.filter(s => !byHotpepperId.has(s.id));
+  const notFoundNames = [...new Set(notFoundByIdShops.map(s => s.name ?? "").filter(Boolean))];
+
+  // 名前が一致する既存レコードをまとめて取得（住所は後でコードで照合）
+  let byNameMap = new Map<string, { id: string; name: string; address: string; tags: string[]; hotpepper_id: string | null }>();
+  if (notFoundNames.length > 0) {
+    const { data: existingByName } = await supabase
+      .from("places")
+      .select("id, hotpepper_id, name, address, tags")
+      .in("name", notFoundNames);
+
+    for (const rec of existingByName ?? []) {
+      // 同名レコードが複数あっても1件だけ保持（最初に見つかったものを使う）
+      if (!byNameMap.has(rec.name)) {
+        byNameMap.set(rec.name, rec);
+      }
+    }
+  }
 
   const toInsert: Record<string, unknown>[] = [];
   const toUpdate: Array<{ dbId: string; record: Record<string, unknown> }> = [];
@@ -151,54 +176,73 @@ async function upsertShops(
     const lng = parseFloat(shop.lng);
     if (isNaN(lat) || isNaN(lng)) { skipped++; continue; }
 
-    const shopName = shop.name ?? "";
-    const catchCopy = shop.catch ?? "";
+    const shopName   = shop.name ?? "";
+    const catchCopy  = shop.catch ?? "";
     const genreCatch = shop.genre?.catch ?? "";
-    const korean = isKoreanShop(shopName, catchCopy, genreCatch);
-    const tags = assignTagsFromConfig(config, shopName, catchCopy, genreCatch, korean);
+    const korean     = isKoreanShop(shopName, catchCopy, genreCatch);
+    const tags       = assignTagsFromConfig(config, shopName, catchCopy, genreCatch, korean);
 
-    if (tags.length === 0) { skipped++; continue; } // フィルタされた（例: asianにkoreashopが来た）
+    if (tags.length === 0) { skipped++; continue; }
 
     const record: Record<string, unknown> = {
-      name: shopName,
-      address: shop.address ?? "",
+      name:            shopName,
+      address:         shop.address ?? "",
       nearest_station: shop.station_name ?? null,
-      lat,
-      lng,
-      hotpepper_id: shop.id,
-      source_type: "hotpepper",
+      lat, lng,
+      hotpepper_id:    shop.id,
+      source_type:     "hotpepper",
       tags,
-      area: shop.address?.split("都").shift()?.split("道").shift()?.split("府").shift()?.split("県").shift() ?? null,
+      area:        shop.address?.split("都").shift()?.split("道").shift()?.split("府").shift()?.split("県").shift() ?? null,
       description: catchCopy || genreCatch || null,
-      photo_url: shop.photo?.pc?.l ?? shop.photo?.pc?.m ?? null,
-      open_hours: shop.open ?? null,
-      close_day: shop.close ?? null,
-      budget: shop.budget?.average ?? null,
+      photo_url:   shop.photo?.pc?.l ?? shop.photo?.pc?.m ?? null,
+      open_hours:  shop.open ?? null,
+      close_day:   shop.close ?? null,
+      budget:      shop.budget?.average ?? null,
       hotpepper_url: shop.urls?.pc ?? null,
-      is_active: true,
+      is_active:   true,
       report_count: 0,
     };
 
-    const existingRecord = existingMap.get(shop.id);
-    if (existingRecord) {
-      // タグをマージ（既存タグを上書きしない、新タグを追加）
-      const mergedTags = Array.from(new Set([...(existingRecord.tags ?? []), ...tags]));
-      toUpdate.push({ dbId: existingRecord.id, record: { tags: mergedTags, photo_url: record.photo_url, open_hours: record.open_hours, budget: record.budget, is_active: true } });
+    // ① hotpepper_id が一致
+    const existById = byHotpepperId.get(shop.id);
+    if (existById) {
+      const mergedTags = Array.from(new Set([...(existById.tags ?? []), ...tags]));
+      toUpdate.push({ dbId: existById.id, record: { tags: mergedTags, photo_url: record.photo_url, open_hours: record.open_hours, budget: record.budget, is_active: true } });
       updated++;
-    } else {
-      toInsert.push(record);
-      inserted++;
+      continue;
     }
+
+    // ② 名前が一致 かつ 住所の先頭30文字が一致 → 同一店舗とみなす
+    const sameNameRec = byNameMap.get(shopName);
+    if (sameNameRec && normalizeAddress(sameNameRec.address) === normalizeAddress(shop.address ?? "")) {
+      const mergedTags = Array.from(new Set([...(sameNameRec.tags ?? []), ...tags]));
+      toUpdate.push({
+        dbId: sameNameRec.id,
+        record: {
+          tags:         mergedTags,
+          hotpepper_id: shop.id,          // hotpepper_id を紐付け（次回から①で検出）
+          photo_url:    record.photo_url,
+          open_hours:   record.open_hours,
+          budget:       record.budget,
+          hotpepper_url: record.hotpepper_url,
+          is_active:    true,
+        },
+      });
+      // 次のループで同名別店舗が来ても混同しないよう削除
+      byNameMap.delete(shopName);
+      updated++;
+      continue;
+    }
+
+    // ③ 新規登録
+    toInsert.push(record);
+    inserted++;
   }
 
   if (!dryRun) {
-    // INSERT（バッチで50件ずつ）
     for (let i = 0; i < toInsert.length; i += 50) {
-      const batch = toInsert.slice(i, i + 50);
-      await supabase.from("places").insert(batch);
+      await supabase.from("places").insert(toInsert.slice(i, i + 50));
     }
-
-    // UPDATE（バッチで）
     for (const { dbId, record } of toUpdate) {
       await supabase.from("places").update(record).eq("id", dbId);
     }
