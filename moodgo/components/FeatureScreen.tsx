@@ -282,21 +282,18 @@ type RegionOverlayItem = {
   label: string;
   color: string;
   tab: Tab;
-  top: number;
-  side: "left" | "right";
-  offset: number;
+  topPct: number;  // imgH に対する %
+  leftPct: number; // imgW に対する %（左端からの位置）
 };
 
 const REGION_OVERLAY: RegionOverlayItem[] = [
-  // 左列
-  { id: "hokkaido", label: "北海道・東北", color: "#5BA8D0", tab: "全国", top:  5, side: "left",  offset: 2 },
-  { id: "chubu",    label: "中部",         color: "#6DB86D", tab: "全国", top: 40, side: "left",  offset: 2 },
-  { id: "chugoku",  label: "中国",         color: "#C9B840", tab: "全国", top: 51, side: "left",  offset: 2 },
-  { id: "shikoku",  label: "四国",         color: "#3BAAA0", tab: "全国", top: 63, side: "left",  offset: 2 },
-  { id: "kyushu",   label: "九州・沖縄",   color: "#E07070", tab: "全国", top: 74, side: "left",  offset: 2 },
-  // 右列
-  { id: "kanto",    label: "関東",         color: "#E8924A", tab: "関東", top: 44, side: "right", offset: 2 },
-  { id: "kinki",    label: "近畿",         color: "#9B7CC8", tab: "全国", top: 57, side: "right", offset: 2 },
+  { id: "hokkaido", label: "北海道・東北", color: "#5BA8D0", tab: "全国", topPct:  3, leftPct: 44 },
+  { id: "kanto",    label: "関東",         color: "#E8924A", tab: "関東", topPct: 42, leftPct: 58 },
+  { id: "chubu",    label: "中部",         color: "#6DB86D", tab: "全国", topPct: 48, leftPct: 38 },
+  { id: "kinki",    label: "近畿",         color: "#9B7CC8", tab: "全国", topPct: 55, leftPct: 16 },
+  { id: "chugoku",  label: "中国",         color: "#C9B840", tab: "全国", topPct: 51, leftPct:  1 },
+  { id: "shikoku",  label: "四国",         color: "#3BAAA0", tab: "全国", topPct: 64, leftPct: 27 },
+  { id: "kyushu",   label: "九州・沖縄",   color: "#E07070", tab: "全国", topPct: 71, leftPct:  1 },
 ];
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
@@ -329,16 +326,14 @@ function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) =>
 
           {/* エリアボタン — 画像座標系で配置 */}
           {REGION_OVERLAY.map((r) => {
-            const btnTop  = offsetY + imgH * (r.top / 100);
-            const btnSide = r.side === "left"
-              ? { left:  offsetX + imgW * (r.offset / 100) }
-              : { right: offsetX + imgW * (r.offset / 100) };
+            const btnTop  = offsetY + imgH * (r.topPct  / 100);
+            const btnLeft = offsetX + imgW * (r.leftPct / 100);
             return (
               <TouchableOpacity
                 key={r.id}
                 activeOpacity={0.75}
                 onPress={() => onSelectRegion(r.tab)}
-                style={[s.mapRegionBtn, { top: btnTop, ...btnSide }]}
+                style={[s.mapRegionBtn, { top: btnTop, left: btnLeft }]}
               >
                 {/* カラードット */}
                 <View style={[s.mapRegionDot, { backgroundColor: r.color }]} />
@@ -927,31 +922,31 @@ const s = StyleSheet.create({
     position: "absolute",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 22,
-    paddingVertical: 6,
-    paddingHorizontal: 9,
-    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    borderRadius: 26,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 7,
     borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: "rgba(0,0,0,0.07)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.13,
-        shadowRadius: 8,
+        shadowOpacity: 0.14,
+        shadowRadius: 10,
       },
-      android: { elevation: 4 },
+      android: { elevation: 5 },
     }),
   },
   mapRegionDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  mapRegionEmoji: { fontSize: 12 },
+  mapRegionEmoji: { fontSize: 13 },
   mapRegionLabel: {
-    fontSize: 11.5,
+    fontSize: 13,
     fontWeight: "700",
     color: "#1C1C1E",
     letterSpacing: -0.3,
