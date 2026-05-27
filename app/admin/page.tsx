@@ -6951,6 +6951,36 @@ export default function AdminPage() {
                 {/* タグ */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "#4a3034", marginBottom: "4px" }}>タグ</label>
+                  {/* アプリタブ振り分けボタン */}
+                  <div style={{ background: "#fff8f0", border: "1px solid #ffd0a0", borderRadius: "10px", padding: "10px 12px", marginBottom: "8px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 800, color: "#c06020", marginBottom: "6px" }}>アプリの表示タブ（必ず1つ選択）</div>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {["全国", "関東", "神奈川"].map((tab) => {
+                        const active = featuredForm.tags.includes(tab);
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setFeaturedForm(f => ({
+                              ...f,
+                              tags: active
+                                ? f.tags.filter(t => t !== tab)
+                                : [...f.tags, tab],
+                            }))}
+                            style={{
+                              padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: 700,
+                              border: active ? "2px solid #e87020" : "2px solid #ddd",
+                              background: active ? "#e87020" : "#fff",
+                              color: active ? "#fff" : "#888",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {active ? "✓ " : ""}{tab}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#999", marginTop: "6px" }}>選択したタブにヒーローカード・カードとして表示されます</div>
+                  </div>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <input
                       value={featuredTagInput}
