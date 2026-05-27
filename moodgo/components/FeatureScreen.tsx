@@ -261,13 +261,15 @@ type RegionOverlayItem = {
 };
 
 const REGION_OVERLAY: RegionOverlayItem[] = [
-  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top: 10, side: "right", offset: 2 },
-  { id: "chubu",   label: "中部",         emoji: "⛰️", color: "#5FAF5F", tab: "全国", top: 27, side: "right", offset: 2 },
-  { id: "kanto",   label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 40, side: "right", offset: 2 },
-  { id: "kinki",   label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 36, side: "left",  offset: 24 },
-  { id: "chugoku", label: "中国",         emoji: "🌉",  color: "#7BA84A", tab: "全国", top: 28, side: "left",  offset: 2 },
-  { id: "shikoku", label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 54, side: "left",  offset: 2 },
-  { id: "kyushu",  label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 65, side: "left",  offset: 2 },
+  { id: "hokkaido", label: "北海道", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top: 12, side: "left",  offset: 27 },
+  { id: "tohoku",   label: "東北",   emoji: "🌲",  color: "#6DB36D", tab: "全国", top: 44, side: "right", offset: 2  },
+  { id: "chubu",    label: "中部",   emoji: "⛰️", color: "#E8924A", tab: "全国", top: 38, side: "left",  offset: 22 },
+  { id: "kanto",    label: "関東",   emoji: "🗼",  color: "#F0A050", tab: "関東", top: 55, side: "right", offset: 2  },
+  { id: "kinki",    label: "近畿",   emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 63, side: "left",  offset: 41 },
+  { id: "chugoku",  label: "中国",   emoji: "🌉",  color: "#7BA84A", tab: "全国", top: 51, side: "left",  offset: 2  },
+  { id: "shikoku",  label: "四国",   emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 71, side: "left",  offset: 21 },
+  { id: "kyushu",   label: "九州",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 76, side: "left",  offset: 2  },
+  { id: "okinawa",  label: "沖縄",   emoji: "🌺",  color: "#E06080", tab: "全国", top: 83, side: "right", offset: 2  },
 ];
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
