@@ -10,6 +10,16 @@
 //       近畿: #FEFCBF          中国: #FED7E2  四国: #E9D8FD
 //       九州・沖縄: #FEEBC8
 
+import {
+  Building2,
+  ChevronRight,
+  Landmark,
+  Leaf,
+  Mountain,
+  Snowflake,
+  Sun,
+  Waves,
+} from 'lucide-react-native';
 import React from 'react';
 import {
   Dimensions,
@@ -57,21 +67,22 @@ export const REGION_LABELS: Record<Region, string> = {
 
 type RegionFloatingButtonProps = {
   label: string;
-  emoji: string;
+  Icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
+  iconColor: string;
   style: ViewStyle;
   onPress: () => void;
 };
 
-function RegionFloatingButton({ label, emoji, style, onPress }: RegionFloatingButtonProps) {
+function RegionFloatingButton({ label, Icon, iconColor, style, onPress }: RegionFloatingButtonProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.72}
       style={[s.floatBtn, style]}
     >
-      <Text style={s.floatEmoji}>{emoji}</Text>
+      <Icon size={13} color={iconColor} strokeWidth={2} />
       <Text style={s.floatLabel}>{label}</Text>
-      <Text style={s.floatArrow}>›</Text>
+      <ChevronRight size={11} color="#C0B0B0" strokeWidth={2} />
     </TouchableOpacity>
   );
 }
@@ -96,49 +107,56 @@ function JapanMapCard({ onSelectRegion }: JapanMapCardProps) {
       {/* 北海道・東北: 右上 */}
       <RegionFloatingButton
         label="北海道・東北"
-        emoji="❄️"
+        Icon={Snowflake}
+        iconColor="#5BA3C9"
         style={{ position: 'absolute', top: 14, right: 8 }}
         onPress={() => onSelectRegion('hokkaido-tohoku')}
       />
       {/* 関東: 右中央 */}
       <RegionFloatingButton
         label="関東"
-        emoji="🗼"
+        Icon={Building2}
+        iconColor="#4A9E6B"
         style={{ position: 'absolute', top: 148, right: 8 }}
         onPress={() => onSelectRegion('kanto')}
       />
       {/* 中部: 中央やや右 */}
       <RegionFloatingButton
         label="中部"
-        emoji="⛰️"
+        Icon={Mountain}
+        iconColor="#3A9E8A"
         style={{ position: 'absolute', top: 204, right: 52 }}
         onPress={() => onSelectRegion('chubu')}
       />
       {/* 近畿: 中央下 */}
       <RegionFloatingButton
         label="近畿"
-        emoji="🏯"
+        Icon={Landmark}
+        iconColor="#9E8A2A"
         style={{ position: 'absolute', top: 240, left: CARD_W * 0.28 }}
         onPress={() => onSelectRegion('kinki')}
       />
       {/* 中国: 左中央 */}
       <RegionFloatingButton
         label="中国"
-        emoji="🌉"
+        Icon={Waves}
+        iconColor="#C96B8A"
         style={{ position: 'absolute', top: 204, left: 8 }}
         onPress={() => onSelectRegion('chugoku')}
       />
       {/* 四国: 左下寄り */}
       <RegionFloatingButton
         label="四国"
-        emoji="🏝️"
+        Icon={Leaf}
+        iconColor="#8A5BC9"
         style={{ position: 'absolute', bottom: 88, left: 30 }}
         onPress={() => onSelectRegion('shikoku')}
       />
       {/* 九州・沖縄: 左下 */}
       <RegionFloatingButton
         label="九州・沖縄"
-        emoji="🌴"
+        Icon={Sun}
+        iconColor="#C97A3A"
         style={{ position: 'absolute', bottom: 28, left: 8 }}
         onPress={() => onSelectRegion('kyushu-okinawa')}
       />
@@ -285,19 +303,10 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  floatEmoji: {
-    fontSize: 13,
-  },
   floatLabel: {
     fontSize: 11,
     fontWeight: '600',
     color: '#333333',
     letterSpacing: -0.1,
-  },
-  floatArrow: {
-    fontSize: 14,
-    color: '#BBAAAA',
-    fontWeight: '600',
-    marginLeft: 1,
   },
 });

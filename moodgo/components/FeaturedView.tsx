@@ -6,6 +6,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import AreaSelectView, { type Region, REGION_LABELS } from './AreaSelectView';
 import {
@@ -319,7 +320,7 @@ export default function FeaturedView({
             style={{ marginRight: 10, paddingVertical: 4, paddingHorizontal: 2 }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={{ fontSize: 22, color: '#BBAAAA' }}>‹</Text>
+            <ChevronLeft size={22} color="#BBAAAA" strokeWidth={2} />
           </TouchableOpacity>
           <Text style={[s.pageTitle, { marginBottom: 0 }]}>
             {REGION_LABELS[selectedRegion]}
