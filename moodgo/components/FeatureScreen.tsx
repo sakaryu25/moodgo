@@ -30,6 +30,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { apiFetch } from "@/lib/api";
 import {
   Bookmark,
@@ -98,6 +99,7 @@ type CardItem = {
   title: string;
   desc: string;
   image: string;
+  slug?: string;
 };
 
 type HeroData = {
@@ -106,6 +108,7 @@ type HeroData = {
   title: string;
   description: string;
   buttonLabel: string;
+  slug?: string;
 };
 
 type SectionData = {
@@ -429,6 +432,7 @@ function SegmentedTabs({ tabs, selected, onSelect }: SegmentedTabsProps) {
 // HeroFeatureCard
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroFeatureCard({ data }: { data: HeroData }) {
+  const router = useRouter();
   return (
     <View style={s.heroWrap}>
       <ImageBackground
@@ -448,7 +452,11 @@ function HeroFeatureCard({ data }: { data: HeroData }) {
           <Text style={s.heroTitle}>{data.title}</Text>
           <Text style={s.heroDesc}>{data.description}</Text>
           <View style={s.heroFooter}>
-            <TouchableOpacity style={s.heroBtn} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={s.heroBtn}
+              activeOpacity={0.85}
+              onPress={() => data.slug && router.push(`/feature/${data.slug}`)}
+            >
               <Text style={s.heroBtnText}>{data.buttonLabel}</Text>
               <ChevronRight size={14} color={C.white} />
             </TouchableOpacity>
@@ -495,6 +503,7 @@ function CategoryChips({ categories }: { categories: string[] }) {
 // HorizontalFeatureCards
 // ─────────────────────────────────────────────────────────────────────────────
 function HorizontalFeatureCards({ title, cards }: { title: string; cards: CardItem[] }) {
+  const router = useRouter();
   return (
     <View style={s.hSection}>
       <View style={s.hSectionHead}>
@@ -514,6 +523,7 @@ function HorizontalFeatureCards({ title, cards }: { title: string; cards: CardIt
             key={i}
             style={[s.hCard, i < cards.length - 1 && { marginRight: 12 }]}
             activeOpacity={0.84}
+            onPress={() => item.slug && router.push(`/feature/${item.slug}`)}
           >
             <ImageBackground
               source={{ uri: item.image }}
@@ -668,6 +678,7 @@ function buildTabData(records: FeaturedPageRecord[]): Partial<Record<Tab, TabCon
         title: first.spot_name,
         description: first.catch_copy ?? "",
         buttonLabel: "特集を読む",
+        slug: first.slug,
       },
       categories: TAB_DATA[tab].categories,
       sections: rest.length
@@ -675,6 +686,7 @@ function buildTabData(records: FeaturedPageRecord[]): Partial<Record<Tab, TabCon
             title: r.spot_name,
             desc: r.catch_copy ?? "",
             image: r.cover_image_url ?? IMG.cafe,
+            slug: r.slug,
           })) }]
         : [],
       prefectures: TAB_DATA[tab].prefectures,
