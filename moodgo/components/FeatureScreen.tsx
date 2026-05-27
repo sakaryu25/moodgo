@@ -93,7 +93,8 @@ const IMG = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-export type Tab = "全国" | "北海道・東北" | "関東" | "中部" | "近畿" | "中国" | "四国" | "九州・沖縄";
+export type Tab = "全国" | "北海道・東北" | "関東" | "中部" | "近畿" | "中国" | "四国" | "九州・沖縄"
+  | "東京" | "神奈川" | "千葉" | "埼玉" | "茨城" | "栃木" | "群馬";
 
 type CardItem = {
   title: string;
@@ -138,7 +139,7 @@ type FeaturedPageRecord = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab Content Data  👇 ここを毎月・エリアごとに更新する
 // ─────────────────────────────────────────────────────────────────────────────
-const TAB_DATA: Record<Tab, TabContentData> = {
+const TAB_DATA: Record<string, TabContentData> = {
   全国: {
     title: `${CURRENT_MONTH}の全国特集`,
     subtitle: "初夏の風を感じる、おでかけガイド",
@@ -280,6 +281,90 @@ const TAB_DATA: Record<Tab, TabContentData> = {
     categories: ["🌊 海", "♨️ 温泉", "🍽️ グルメ", "🌺 自然", "🌅 絶景"],
     sections: [],
   },
+
+  東京: {
+    title: `${CURRENT_MONTH}の東京特集`,
+    subtitle: "グルメ・カルチャー・夜景。東京の今を楽しむ",
+    hero: {
+      image: IMG.tokyo,
+      label: "今月のおすすめ",
+      title: "東京で見つける\n週末の特別な時間",
+      description: "街に溶け込みながら、特別な体験を。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["🏙️ 街歩き", "☕ カフェ", "🍽️ グルメ", "🌃 夜景", "🎨 アート"],
+    sections: [],
+  },
+
+  千葉: {
+    title: `${CURRENT_MONTH}の千葉特集`,
+    subtitle: "海・テーマパーク・自然。千葉の魅力へ",
+    hero: {
+      image: IMG.beach,
+      label: "今月のおすすめ",
+      title: "千葉の海と空に\n癒されるひとときを",
+      description: "東京から近い、非日常のリゾートへ。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["🌊 海", "🎡 レジャー", "🍽️ グルメ", "☕ カフェ", "🌿 自然"],
+    sections: [],
+  },
+
+  埼玉: {
+    title: `${CURRENT_MONTH}の埼玉特集`,
+    subtitle: "川越・秩父・自然。埼玉の魅力を再発見",
+    hero: {
+      image: IMG.hiking,
+      label: "今月のおすすめ",
+      title: "小江戸・川越と\n秩父の自然を歩く",
+      description: "歴史と自然が共存する、近場の旅へ。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["🏯 歴史", "🌿 自然", "☕ カフェ", "🍽️ グルメ", "🚶 散歩"],
+    sections: [],
+  },
+
+  茨城: {
+    title: `${CURRENT_MONTH}の茨城特集`,
+    subtitle: "海・自然・食。知られざる茨城の魅力",
+    hero: {
+      image: IMG.waterfall,
+      label: "今月のおすすめ",
+      title: "袋田の滝と\n大洗の海を旅する",
+      description: "広大な自然と新鮮な海の幸を楽しもう。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["🌊 海", "🌿 自然", "🍽️ グルメ", "🏯 歴史", "☕ カフェ"],
+    sections: [],
+  },
+
+  栃木: {
+    title: `${CURRENT_MONTH}の栃木特集`,
+    subtitle: "日光・那須・温泉。栃木の自然と歴史へ",
+    hero: {
+      image: IMG.fuji,
+      label: "今月のおすすめ",
+      title: "日光の絶景と\n那須高原の爽やかな風",
+      description: "世界遺産と大自然が待つ、栃木の旅へ。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["🏯 歴史", "♨️ 温泉", "🌿 自然", "🍽️ グルメ", "🌅 絶景"],
+    sections: [],
+  },
+
+  群馬: {
+    title: `${CURRENT_MONTH}の群馬特集`,
+    subtitle: "草津・伊香保・自然。温泉王国・群馬へ",
+    hero: {
+      image: IMG.waterfall,
+      label: "今月のおすすめ",
+      title: "草津温泉で\n心も体もととのう",
+      description: "日本最高峰の温泉地で、ゆったり過ごそう。",
+      buttonLabel: "特集を読む",
+    },
+    categories: ["♨️ 温泉", "🌿 自然", "🍽️ グルメ", "☕ カフェ", "🏔️ 絶景"],
+    sections: [],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -352,6 +437,66 @@ const REGION_OVERLAY: RegionOverlayItem[] = [
   { id: "shikoku",  label: "四国",         color: "#3BAAA0", tab: "四国",         topPct: 64, leftPct: 27 },
   { id: "kyushu",   label: "九州・沖縄",   color: "#E07070", tab: "九州・沖縄",   topPct: 71, leftPct:  1 },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KantoPrefSelectView — 関東都県グリッド選択
+// ─────────────────────────────────────────────────────────────────────────────
+
+type KantoPrefCell = { label: string; tab: Tab; color: string; Icon: LucideIcon };
+
+const KANTO_GRID: (KantoPrefCell | null)[][] = [
+  [
+    { label: "群馬", tab: "群馬",  color: "#C97A28", Icon: Mountain  },
+    { label: "栃木", tab: "栃木",  color: "#5A9850", Icon: Leaf      },
+    { label: "茨城", tab: "茨城",  color: "#3A80B0", Icon: Waves     },
+  ],
+  [
+    { label: "埼玉", tab: "埼玉",  color: "#D87828", Icon: Building2 },
+    { label: "東京", tab: "東京",  color: "#B03018", Icon: Landmark  },
+    { label: "千葉", tab: "千葉",  color: "#C89830", Icon: Sun       },
+  ],
+  [
+    null,
+    { label: "神奈川", tab: "神奈川", color: "#2A6AA8", Icon: Waves  },
+    null,
+  ],
+];
+
+function KantoPrefSelectView({ onSelectPref }: { onSelectPref: (tab: Tab) => void }) {
+  return (
+    <LinearGradient colors={["#FFF5EE", "#FFF8F2", "#FFFAF5"]} style={{ flex: 1 }}>
+      <View style={s.areaIntro}>
+        <View style={s.areaBadge}>
+          <Text style={s.areaBadgeText}>関東エリア</Text>
+        </View>
+        <Text style={s.areaTitle}>都道府県を選ぶ</Text>
+        <Text style={s.areaSubtitle}>気になるエリアをタップ</Text>
+      </View>
+
+      <View style={s.kantoGrid}>
+        {KANTO_GRID.map((row, rIdx) => (
+          <View key={rIdx} style={s.kantoRow}>
+            {row.map((cell, cIdx) =>
+              cell ? (
+                <TouchableOpacity
+                  key={cIdx}
+                  style={[s.kantoPref, { borderColor: cell.color + "66" }]}
+                  onPress={() => onSelectPref(cell.tab)}
+                  activeOpacity={0.75}
+                >
+                  <cell.Icon size={22} color={cell.color} strokeWidth={2} />
+                  <Text style={[s.kantoPrefLabel, { color: cell.color }]}>{cell.label}</Text>
+                </TouchableOpacity>
+              ) : (
+                <View key={cIdx} style={s.kantoPrefEmpty} />
+              )
+            )}
+          </View>
+        ))}
+      </View>
+    </LinearGradient>
+  );
+}
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
   const [cW, setCW] = useState(0);
@@ -689,7 +834,8 @@ function FeatureContentView({ selectedTab, apiTabData }: FeatureContentViewProps
 // 自前のタブバー・SafeAreaView は持たない
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTabData(records: FeaturedPageRecord[]): Partial<Record<Tab, TabContentData>> {
-  const TABS: Tab[] = ["全国", "北海道・東北", "関東", "中部", "近畿", "中国", "四国", "九州・沖縄"];
+  const TABS: Tab[] = ["全国", "北海道・東北", "関東", "中部", "近畿", "中国", "四国", "九州・沖縄",
+    "東京", "神奈川", "千葉", "埼玉", "茨城", "栃木", "群馬"];
   const grouped: Record<Tab, FeaturedPageRecord[]> = { 全国: [], 関東: [], 神奈川: [] };
 
   for (const rec of records) {
@@ -732,9 +878,13 @@ function buildTabData(records: FeaturedPageRecord[]): Partial<Record<Tab, TabCon
   return result;
 }
 
+type NavStage = "map" | "kanto-pref" | "content";
+
+const KANTO_PREF_TABS: Tab[] = ["東京", "神奈川", "千葉", "埼玉", "茨城", "栃木", "群馬"];
+
 export default function FeatureScreen() {
   const insets = useSafeAreaInsets();
-  const [hasSelectedArea, setHasSelectedArea] = useState(false);
+  const [stage, setStage] = useState<NavStage>("map");
   const [selectedTab, setSelectedTab] = useState<Tab>("全国");
   const [apiTabData, setApiTabData] = useState<Partial<Record<Tab, TabContentData>>>({});
 
@@ -749,8 +899,23 @@ export default function FeatureScreen() {
 
   const handleSelectRegion = (tab: Tab) => {
     setSelectedTab(tab);
-    setHasSelectedArea(true);
+    setStage(tab === "関東" ? "kanto-pref" : "content");
   };
+
+  const handleSelectPref = (tab: Tab) => {
+    setSelectedTab(tab);
+    setStage("content");
+  };
+
+  const handleBack = () => {
+    if (stage === "content" && KANTO_PREF_TABS.includes(selectedTab)) {
+      setStage("kanto-pref");
+    } else {
+      setStage("map");
+    }
+  };
+
+  const showBack = stage !== "map";
 
   return (
     <View style={s.safe}>
@@ -763,9 +928,9 @@ export default function FeatureScreen() {
         <TouchableOpacity
           style={s.headerIconBtn}
           activeOpacity={0.72}
-          onPress={() => hasSelectedArea && setHasSelectedArea(false)}
+          onPress={showBack ? handleBack : undefined}
         >
-          {hasSelectedArea
+          {showBack
             ? <MapPin size={19} color={C.accent} />
             : <Search size={19} color={C.accent} />
           }
@@ -774,9 +939,13 @@ export default function FeatureScreen() {
 
       {/* ── メインコンテンツ ── */}
       <View style={{ flex: 1 }}>
-        {!hasSelectedArea ? (
+        {stage === "map" && (
           <AreaSelectView onSelectRegion={handleSelectRegion} />
-        ) : (
+        )}
+        {stage === "kanto-pref" && (
+          <KantoPrefSelectView onSelectPref={handleSelectPref} />
+        )}
+        {stage === "content" && (
           <FeatureContentView
             selectedTab={selectedTab}
             apiTabData={apiTabData}
@@ -825,6 +994,38 @@ const s = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#FFD9C8",
+  },
+
+  // ── KantoPrefSelectView ──
+  kantoGrid: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    justifyContent: "center",
+    gap: 10,
+  },
+  kantoRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  kantoPref: {
+    flex: 1,
+    backgroundColor: C.white,
+    borderRadius: 18,
+    paddingVertical: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    ...shadow,
+  },
+  kantoPrefEmpty: {
+    flex: 1,
+  },
+  kantoPrefLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.3,
   },
 
   // ── AreaSelectView ──
