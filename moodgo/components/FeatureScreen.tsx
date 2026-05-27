@@ -247,7 +247,7 @@ const shadow = Platform.select({
 // ─────────────────────────────────────────────────────────────────────────────
 
 // 画像の元アスペクト比
-const IMG_RATIO = 2000 / 1503; // 高さ / 幅
+const IMG_RATIO = 1524 / 1290; // 高さ / 幅（クロップ済み）
 
 type RegionOverlayItem = {
   id: string;
@@ -261,13 +261,13 @@ type RegionOverlayItem = {
 };
 
 const REGION_OVERLAY: RegionOverlayItem[] = [
-  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top: 10, side: "left",  offset: 2  },
-  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 44, side: "left",  offset: 2  },
-  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 54, side: "left",  offset: 2  },
-  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 48, side: "right", offset: 2  },
-  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 63, side: "left",  offset: 30 },
-  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 70, side: "left",  offset: 2  },
-  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 77, side: "right", offset: 2  },
+  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top:  6, side: "left",  offset: 2  },
+  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 42, side: "left",  offset: 2  },
+  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 52, side: "left",  offset: 2  },
+  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 46, side: "right", offset: 2  },
+  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 61, side: "left",  offset: 28 },
+  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 68, side: "left",  offset: 2  },
+  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 76, side: "right", offset: 2  },
 ];
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
@@ -297,34 +297,6 @@ function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) =>
             style={{ position: "absolute", left: offsetX, top: offsetY, width: imgW, height: imgH }}
             resizeMode="contain"
           />
-
-          {/* 沖縄インセット（右下） */}
-          <View
-            style={{
-              position: "absolute",
-              bottom: cH * 0.04,
-              right: cW * 0.02,
-              width: cW * 0.22,
-              backgroundColor: "rgba(255,255,255,0.75)",
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: "rgba(224,96,128,0.3)",
-              padding: 4,
-              ...Platform.select({
-                ios: { shadowColor: "#E06080", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 },
-                android: { elevation: 3 },
-              }),
-            }}
-          >
-            <Image
-              source={require("../assets/images/okinawa-map.png")}
-              style={{ width: "100%", aspectRatio: 232 / 173 }}
-              resizeMode="contain"
-            />
-            <Text style={{ textAlign: "center", fontSize: 9, fontWeight: "700", color: "#E06080", paddingBottom: 2 }}>
-              沖縄
-            </Text>
-          </View>
 
           {/* エリアボタン — 画像座標系で配置 */}
           {REGION_OVERLAY.map((r) => {
