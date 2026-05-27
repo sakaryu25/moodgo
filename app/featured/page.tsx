@@ -18,13 +18,14 @@ type Region = {
 };
 
 const REGIONS: Region[] = [
+  // ── 左列（上→下） ──────────────────────────────────────────────────────────
   {
     id: "hokkaido",
     label: "北海道・東北",
     emoji: "❄️",
     color: "#5BA8D0",
-    btn: { top: 6, left: 2 },
-    mid: { x: 50, y: 10 },
+    btn: { top: 5, left: 2 },
+    mid: { x: 52, y: 9 },
     dot: { x: 66, y: 27 },
   },
   {
@@ -32,8 +33,8 @@ const REGIONS: Region[] = [
     label: "中部",
     emoji: "⛰️",
     color: "#6DB86D",
-    btn: { top: 42, left: 2 },
-    mid: { x: 36, y: 46 },
+    btn: { top: 40, left: 2 },
+    mid: { x: 38, y: 44 },
     dot: { x: 48, y: 55 },
   },
   {
@@ -41,33 +42,17 @@ const REGIONS: Region[] = [
     label: "中国",
     emoji: "⛩️",
     color: "#C9B840",
-    btn: { top: 52, left: 2 },
+    btn: { top: 51, left: 2 },
+    mid: { x: 20, y: 55 },
     dot: { x: 24, y: 63 },
-  },
-  {
-    id: "kanto",
-    label: "関東",
-    emoji: "🗼",
-    color: "#E8924A",
-    btn: { top: 46, right: 2 },
-    mid: { x: 65, y: 50 },
-    dot: { x: 57, y: 55 },
-  },
-  {
-    id: "kinki",
-    label: "近畿",
-    emoji: "🏯",
-    color: "#9B7CC8",
-    btn: { top: 61, left: 28 },
-    dot: { x: 37, y: 63 },
   },
   {
     id: "shikoku",
     label: "四国",
     emoji: "🌊",
     color: "#3BAAA0",
-    btn: { top: 68, left: 2 },
-    mid: { x: 28, y: 72 },
+    btn: { top: 63, left: 2 },
+    mid: { x: 28, y: 67 },
     dot: { x: 34, y: 62 },
   },
   {
@@ -75,9 +60,28 @@ const REGIONS: Region[] = [
     label: "九州・沖縄",
     emoji: "🌴",
     color: "#E07070",
-    btn: { top: 76, right: 2 },
-    mid: { x: 25, y: 79 },
+    btn: { top: 74, left: 2 },
+    mid: { x: 14, y: 78 },
     dot: { x: 17, y: 74 },
+  },
+  // ── 右列（上→下） ──────────────────────────────────────────────────────────
+  {
+    id: "kanto",
+    label: "関東",
+    emoji: "🗼",
+    color: "#E8924A",
+    btn: { top: 44, right: 2 },
+    mid: { x: 68, y: 48 },
+    dot: { x: 57, y: 55 },
+  },
+  {
+    id: "kinki",
+    label: "近畿",
+    emoji: "🏯",
+    color: "#9B7CC8",
+    btn: { top: 57, right: 2 },
+    mid: { x: 52, y: 61 },
+    dot: { x: 37, y: 63 },
   },
 ];
 

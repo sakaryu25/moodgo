@@ -261,13 +261,15 @@ type RegionOverlayItem = {
 };
 
 const REGION_OVERLAY: RegionOverlayItem[] = [
-  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top:  6, side: "left",  offset: 2  },
-  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 42, side: "left",  offset: 2  },
-  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 52, side: "left",  offset: 2  },
-  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 46, side: "right", offset: 2  },
-  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 61, side: "left",  offset: 28 },
-  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 68, side: "left",  offset: 2  },
-  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 76, side: "right", offset: 2  },
+  // 左列
+  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top:  5, side: "left",  offset: 2 },
+  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 40, side: "left",  offset: 2 },
+  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 51, side: "left",  offset: 2 },
+  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 63, side: "left",  offset: 2 },
+  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 74, side: "left",  offset: 2 },
+  // 右列
+  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 44, side: "right", offset: 2 },
+  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 57, side: "right", offset: 2 },
 ];
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
