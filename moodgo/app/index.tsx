@@ -111,6 +111,7 @@ export default function Home() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileAge, setProfileAge] = useState('');
   const [profileGender, setProfileGender] = useState('');
+  const [profilePrefecture, setProfilePrefecture] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
   // Results
@@ -228,7 +229,7 @@ export default function Home() {
       const feed = await loadJSON<FeedbackItem[]>(FEEDBACK_KEY, []);
       const pending = await loadJSON<FeedbackItem | null>(PENDING_VISITED_KEY, null);
       const blocked = await loadJSON<string[]>(BLOCKED_PLACES_KEY, []);
-      const profile = await loadJSON<{ age?: string; gender?: string }>(PROFILE_KEY, {});
+      const profile = await loadJSON<{ age?: string; gender?: string; prefecture?: string }>(PROFILE_KEY, {});
       setFavorites(faves);
       setHistory(hist);
       setPastFeedback(feed);
@@ -236,6 +237,7 @@ export default function Home() {
       setBlockedPlaces(blocked);
       if (profile.age) setProfileAge(profile.age);
       if (profile.gender) setProfileGender(profile.gender);
+      if (profile.prefecture) setProfilePrefecture(profile.prefecture);
       setProfileSetupDone(!!(profile.age || profile.gender));
       setProfileLoaded(true);
     })();
@@ -1163,10 +1165,12 @@ export default function Home() {
         onChangeLang={(l) => setLang(l)}
         profileAge={profileAge}
         profileGender={profileGender}
-        onSaveProfile={(age, gender) => {
+        profilePrefecture={profilePrefecture}
+        onSaveProfile={(age, gender, prefecture) => {
           setProfileAge(age);
           setProfileGender(gender);
-          saveJSON(PROFILE_KEY, { age, gender });
+          setProfilePrefecture(prefecture);
+          saveJSON(PROFILE_KEY, { age, gender, prefecture });
         }}
         onClearHistory={() => {
           setHistory([]);

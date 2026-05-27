@@ -1,3 +1,4 @@
+import { Check, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -9,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '@/constants/colors';
+import { PREFECTURE_OPTIONS } from './PrefecturePicker';
 
 const AGE_OPTIONS    = ['10代', '20代', '30代', '40代', '50代', '60代以上'];
 const GENDER_OPTIONS = ['男性', '女性', 'その他', '答えたくない'];
@@ -21,7 +22,8 @@ type Props = {
   onChangeLang: (v: 'ja' | 'en') => void;
   profileAge: string;
   profileGender: string;
-  onSaveProfile: (age: string, gender: string) => void;
+  profilePrefecture: string;
+  onSaveProfile: (age: string, gender: string, prefecture: string) => void;
   onClearHistory: () => void;
 };
 
@@ -34,6 +36,7 @@ const T = {
     sectionProfile: 'プロフィール',
     ageLabel: '年代',
     genderLabel: '性別',
+    prefectureLabel: '都道府県',
     saveProfile: '保存する',
     sectionData: 'データ',
     clearHistory: '履歴をすべてクリア',
@@ -53,6 +56,7 @@ const T = {
     sectionProfile: 'Profile',
     ageLabel: 'Age group',
     genderLabel: 'Gender',
+    prefectureLabel: 'Prefecture',
     saveProfile: 'Save',
     sectionData: 'Data',
     clearHistory: 'Clear all history',
@@ -68,20 +72,23 @@ const T = {
 
 export default function SettingsView({
   visible, onClose, lang, onChangeLang,
-  profileAge, profileGender, onSaveProfile, onClearHistory,
+  profileAge, profileGender, profilePrefecture, onSaveProfile, onClearHistory,
 }: Props) {
   const insets = useSafeAreaInsets();
   const t = T[lang];
 
-  const [ageInput, setAgeInput] = useState(profileAge);
-  const [genderInput, setGenderInput] = useState(profileGender);
+  const [ageInput, setAgeInput]             = useState(profileAge);
+  const [genderInput, setGenderInput]       = useState(profileGender);
+  const [prefectureInput, setPrefectureInput] = useState(profilePrefecture);
+  const [prefPickerVisible, setPrefPickerVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setAgeInput(profileAge);
       setGenderInput(profileGender);
+      setPrefectureInput(profilePrefecture);
     }
-  }, [visible, profileAge, profileGender]);
+  }, [visible, profileAge, profileGender, profilePrefecture]);
 
   const handleClearHistory = () => {
     Alert.alert(t.clearConfirmTitle, t.clearConfirmMsg, [
@@ -101,7 +108,10 @@ export default function SettingsView({
         {/* Header */}
         <View style={s.header}>
           <Text style={s.headerTitle}>{t.title}</Text>
-          <TouchableOpacity onPress={() => { onSaveProfile(ageInput, genderInput); onClose(); }} style={s.doneBtn}>
+          <TouchableOpacity
+            onPress={() => { onSaveProfile(ageInput, genderInput, prefectureInput); onClose(); }}
+            style={s.doneBtn}
+          >
             <Text style={s.doneBtnText}>{t.done}</Text>
           </TouchableOpacity>
         </View>
@@ -151,6 +161,7 @@ export default function SettingsView({
                 </TouchableOpacity>
               ))}
             </View>
+
             <View style={[s.row, s.rowBorder, { marginTop: 4 }]}>
               <Text style={s.rowLabel}>{t.genderLabel}</Text>
             </View>
@@ -166,9 +177,24 @@ export default function SettingsView({
                 </TouchableOpacity>
               ))}
             </View>
+
+            <TouchableOpacity
+              onPress={() => setPrefPickerVisible(true)}
+              style={[s.row, { marginTop: 4 }]}
+              activeOpacity={0.7}
+            >
+              <Text style={s.rowLabel}>{t.prefectureLabel}</Text>
+              <View style={s.prefRow}>
+                <Text style={prefectureInput ? s.rowValue : s.rowValueEmpty}>
+                  {prefectureInput || (lang === 'ja' ? '未設定' : 'Not set')}
+                </Text>
+                <ChevronRight size={16} color="#C7C7CC" strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
           </View>
+
           <TouchableOpacity
-            onPress={() => onSaveProfile(ageInput, genderInput)}
+            onPress={() => onSaveProfile(ageInput, genderInput, prefectureInput)}
             style={s.saveBtn}
             activeOpacity={0.8}
           >
@@ -192,36 +218,105 @@ export default function SettingsView({
             </View>
           </View>
         </ScrollView>
+
+        {/* 都道府県ピッカー：同じ Modal 内のオーバーレイ */}
+        {prefPickerVisible && (
+          <View style={[StyleSheet.absoluteFill, s.prefOverlay]}>
+            <View style={s.prefOverlayHeader}>
+              <Text style={s.prefOverlayTitle}>{t.prefectureLabel}</Text>
+              <TouchableOpacity onPress={() => setPrefPickerVisible(false)} style={s.doneBtn}>
+                <Text style={s.doneBtnText}>{t.done}</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={s.prefOverlayScroll}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 16, padding: 16 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={s.card}>
+                {PREFECTURE_OPTIONS.map((opt, i) => (
+                  <TouchableOpacity
+                    key={opt}
+                    onPress={() => { setPrefectureInput(opt); setPrefPickerVisible(false); }}
+                    style={[s.row, i < PREFECTURE_OPTIONS.length - 1 && s.rowBorder]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.rowLabel, prefectureInput === opt && s.rowValue]}>{opt}</Text>
+                    {prefectureInput === opt && <Check size={18} color="#FF6B35" strokeWidth={2.5} />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
       </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  root: { flex: 1, backgroundColor: '#F2F2F7' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14,
+    backgroundColor: '#F2F2F7',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.12)',
+  },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#000' },
   doneBtn: { paddingVertical: 4, paddingHorizontal: 2 },
-  doneBtnText: { fontSize: 16, fontWeight: '700', color: '#F43F5E' },
+  doneBtnText: { fontSize: 17, fontWeight: '600', color: '#FF6B35' },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 24, gap: 0 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: 4, marginBottom: 8, marginTop: 24 },
-  card: { backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, borderWidth: 1, borderColor: '#F3F4F6' },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, minHeight: 52 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  rowLabel: { fontSize: 16, color: '#111827', fontWeight: '500' },
-  rowValue: { fontSize: 16, color: '#9CA3AF' },
-  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 14 },
-  optionChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: '#F9FAFB', borderWidth: 1.5, borderColor: '#F3F4F6' },
-  optionChipActive: { backgroundColor: '#FFF5F6', borderColor: '#F43F5E' },
-  optionChipText: { fontSize: 14, fontWeight: '500', color: '#374151' },
-  optionChipTextActive: { color: '#F43F5E', fontWeight: '700' },
-  segmented: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 10, padding: 3, gap: 2 },
-  segment: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8 },
-  segmentActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3 },
-  segmentText: { fontSize: 14, fontWeight: '500', color: '#9CA3AF' },
-  segmentTextActive: { color: '#111827', fontWeight: '700' },
-  saveBtn: { marginTop: 12, borderRadius: 16, overflow: 'hidden', paddingVertical: 15, alignItems: 'center', backgroundColor: '#F43F5E' },
+  sectionLabel: {
+    fontSize: 13, fontWeight: '500', color: '#8E8E93',
+    textTransform: 'uppercase', letterSpacing: 0.4,
+    paddingHorizontal: 4, marginBottom: 6, marginTop: 24,
+  },
+  card: {
+    backgroundColor: '#fff', borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4,
+  },
+  row: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 13, minHeight: 48,
+  },
+  rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E5EA' },
+  rowLabel: { fontSize: 16, color: '#000', fontWeight: '400' },
+  rowValue: { fontSize: 15, color: '#FF6B35', fontWeight: '600' },
+  rowValueEmpty: { fontSize: 15, color: '#C7C7CC', fontWeight: '400' },
+  prefRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+
+  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 },
+  optionChip: {
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10,
+    backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  optionChipActive: { backgroundColor: '#FF6B3515', borderColor: '#FF6B35' },
+  optionChipText: { fontSize: 14, fontWeight: '500', color: '#3C3C43' },
+  optionChipTextActive: { color: '#FF6B35', fontWeight: '600' },
+
+  segmented: {
+    flexDirection: 'row', backgroundColor: '#E5E5EA', borderRadius: 8, padding: 2, gap: 2,
+  },
+  segment: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
+  segmentActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  segmentText: { fontSize: 14, fontWeight: '500', color: '#8E8E93' },
+  segmentTextActive: { color: '#000', fontWeight: '600' },
+
+  saveBtn: {
+    marginTop: 10, backgroundColor: '#FF6B35', borderRadius: 10, paddingVertical: 13,
+    alignItems: 'center',
+  },
   saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  destructiveText: { fontSize: 16, color: '#EF4444', fontWeight: '500' },
+  destructiveText: { fontSize: 16, color: '#FF3B30', fontWeight: '400' },
+
+  prefOverlay: { backgroundColor: '#F2F2F7', zIndex: 10 },
+  prefOverlayHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.12)',
+  },
+  prefOverlayTitle: { fontSize: 17, fontWeight: '700', color: '#000' },
+  prefOverlayScroll: { flex: 1 },
 });
