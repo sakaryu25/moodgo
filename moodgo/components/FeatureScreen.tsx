@@ -247,7 +247,7 @@ const shadow = Platform.select({
 // ─────────────────────────────────────────────────────────────────────────────
 
 // 画像の元アスペクト比
-const IMG_RATIO = 813 / 632; // 高さ / 幅
+const IMG_RATIO = 2000 / 1503; // 高さ / 幅
 
 type RegionOverlayItem = {
   id: string;
@@ -261,13 +261,13 @@ type RegionOverlayItem = {
 };
 
 const REGION_OVERLAY: RegionOverlayItem[] = [
-  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top: 14, side: "left",  offset: 26 },
-  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 38, side: "left",  offset: 22 },
-  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 52, side: "left",  offset: 2  },
-  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 46, side: "right", offset: 2  },
-  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 60, side: "left",  offset: 38 },
-  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 70, side: "left",  offset: 20 },
-  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 77, side: "left",  offset: 2  },
+  { id: "hokkaido", label: "北海道・東北", emoji: "❄️",  color: "#5BA8D0", tab: "全国", top: 10, side: "left",  offset: 2  },
+  { id: "chubu",    label: "中部",         emoji: "⛰️", color: "#6DB86D", tab: "全国", top: 44, side: "left",  offset: 2  },
+  { id: "chugoku",  label: "中国",         emoji: "⛩️", color: "#C9B840", tab: "全国", top: 54, side: "left",  offset: 2  },
+  { id: "kanto",    label: "関東",         emoji: "🗼",  color: "#E8924A", tab: "関東", top: 48, side: "right", offset: 2  },
+  { id: "kinki",    label: "近畿",         emoji: "🏯",  color: "#9B7CC8", tab: "全国", top: 63, side: "left",  offset: 30 },
+  { id: "shikoku",  label: "四国",         emoji: "🌊",  color: "#3BAAA0", tab: "全国", top: 70, side: "left",  offset: 2  },
+  { id: "kyushu",   label: "九州・沖縄",   emoji: "🌴",  color: "#E07070", tab: "全国", top: 77, side: "right", offset: 2  },
 ];
 
 function JapanMapWithButtons({ onSelectRegion }: { onSelectRegion: (tab: Tab) => void }) {
