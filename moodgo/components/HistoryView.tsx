@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { HistoryItem, FavoriteItem, Recommendation } from '@/types/app';
 import PlaceCard from './PlaceCard';
-import { COLORS } from '@/constants/Colors';
+import { COLORS } from '@/constants/colors';
 
 type Props = {
   history: HistoryItem[];

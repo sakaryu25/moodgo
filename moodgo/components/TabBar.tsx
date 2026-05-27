@@ -6,7 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { COLORS } from '@/constants/Colors';
+import { COLORS } from '@/constants/colors';
 
 type Tab = 'home' | 'history' | 'favorites' | 'featured';
 

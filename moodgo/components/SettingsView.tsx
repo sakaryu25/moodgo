@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '@/constants/Colors';
+import { COLORS } from '@/constants/colors';
 
 const AGE_OPTIONS    = ['10代', '20代', '30代', '40代', '50代', '60代以上'];
 const GENDER_OPTIONS = ['男性', '女性', 'その他', '答えたくない'];

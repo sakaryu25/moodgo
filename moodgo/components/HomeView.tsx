@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
-import { COLORS } from '@/constants/Colors';
+import { COLORS } from '@/constants/colors';
 
 const MOODS = [
   { label: '最高！', labelEn: 'Amazing!', color: '#FFD040', ring: '#FFAA00', bg: '#FFF7D6', faceColor: '#FFE566' },
